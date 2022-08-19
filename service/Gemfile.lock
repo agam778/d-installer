@@ -1,3 +1,11 @@
+GIT
+  remote: https://github.com/mvidner/ruby-dbus
+  revision: ff1acbef940aac14cd57b7751725e85f2cdcec87
+  branch: object-manager-service
+  specs:
+    ruby-dbus (0.18.1)
+      rexml
+
 PATH
   remote: .
   specs:
@@ -9,7 +17,6 @@ PATH
       fast_gettext (~> 2.2.0)
       nokogiri (~> 1.13.1)
       rexml (~> 3.2.5)
-      ruby-dbus (~> 0.18.1)
 
 GEM
   remote: https://rubygems.org/
@@ -51,8 +58,6 @@ GEM
       rspec-support (~> 3.11.0)
     rspec-support (3.11.0)
     ruby-augeas (0.5.0)
-    ruby-dbus (0.18.1)
-      rexml
     simplecov (0.21.2)
       docile (~> 1.1)
       simplecov-html (~> 0.11)
@@ -71,6 +76,7 @@ DEPENDENCIES
   packaging_rake_tasks (~> 1.5.1)
   rake (~> 13.0.6)
   rspec (~> 3.11.0)
+  ruby-dbus!
   simplecov (~> 0.21.2)
   simplecov-lcov (~> 0.8.0)
 

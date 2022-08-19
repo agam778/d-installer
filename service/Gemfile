@@ -23,6 +23,7 @@
 source "https://rubygems.org"
 
 gemspec
+gem "ruby-dbus", git: "https://github.com/mvidner/ruby-dbus", branch: "object-manager-service"
 
 group :development do
   gem "byebug"
