@@ -47,16 +47,14 @@ class NetworkClient {
    * @return {Promise.<IPConfig>}
    */
   async config() {
-    const data = await this.#addresses();
-    const addresses = data.map(a => {
-      return {
-        address: a.address.v,
-        prefix: a.prefix.v
-      };
-    });
+    const conns = await this.#connections();
+    const addresses = conns.map(c => c.ip4.map(ip => ip.address).join(","));
 
     return {
       addresses,
+      devices: await this.devices(),
+      interfaces: await this.interfaces(),
+      connections: conns,
       hostname: await this.hostname()
     };
   }
@@ -74,6 +72,42 @@ class NetworkClient {
     return proxy.Hostname;
   }
 
+  async devices() {
+    const proxy = await this.proxy(NM_IFACE);
+
+    let devices = [];
+
+    for (const devicePath of proxy.AllDevices) {
+      const device = await this.proxy(`${NM_IFACE}.Device`, devicePath);
+
+      devices = [
+        ...devices,
+        {
+          dbusPath: devicePath,
+          iface: device.Interface,
+          mac: device.HwAddress
+        }
+      ];
+    }
+
+    return devices;
+  }
+
+  async interfaces() {
+    const d = await this.devices();
+
+    return d.map(device => device.iface);
+
+    // let result = [];
+    //
+    // // for (const device of this.#devices()) {
+    //   const device = await this.proxy(`${NM_IFACE}.Device`, devicePath);
+    //   result = [...result, device.Interface];
+    // }
+    //
+    // return result;
+  }
+
   /*
    * Returns list of active NM connections
    *
@@ -86,7 +120,26 @@ class NetworkClient {
   async #connections() {
     const proxy = await this.proxy(NM_IFACE);
 
-    return proxy.ActiveConnections;
+    let conns = [];
+
+    for (const connectionPath of proxy.ActiveConnections) {
+      const connection = await this.proxy(`${NM_IFACE}.Connection.Active`, connectionPath);
+
+      conns = [
+        ...conns,
+        {
+          id: connection.Id,
+          devices: connection.Devices,
+          ip4: await this.#address(connection.Ip4Config),
+          configPaths: {
+            ip4: connection.Ip4Config,
+            ip6: connection.Ip6Config
+          }
+        }
+      ];
+    }
+
+    return conns;
   }
 
   /*
@@ -99,11 +152,9 @@ class NetworkClient {
    *
    * @return {Promise.<Map>}
    */
-  async #address(connection) {
-    const configPath = await this.proxy(NM_IFACE + ".Connection.Active", connection);
-    const ipConfigs = await this.proxy(NM_IFACE + ".IP4Config", configPath.Ip4Config);
-
-    return ipConfigs.AddressData;
+  async #address(path) {
+    const { AddressData } = await this.proxy(NM_IFACE + ".IP4Config", path);
+    return AddressData;
   }
 
   /*
@@ -115,6 +166,7 @@ class NetworkClient {
    */
   async #addresses() {
     const conns = await this.#connections();
+    return conns.map(c => c.ip4);
 
     let result = [];
 

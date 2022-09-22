@@ -31,6 +31,7 @@ import Category from "./Category";
 import LanguageSelector from "./LanguageSelector";
 import Storage from "./Storage";
 import Users from "./Users";
+import Network from "./Network";
 import Popup from "./Popup";
 
 import {
@@ -38,6 +39,7 @@ import {
   EOS_TRANSLATE as LanguagesSelectionIcon,
   EOS_VOLUME as HardDriveIcon,
   EOS_MANAGE_ACCOUNTS as UsersIcon,
+  EOS_WIFI as NetworkIcon,
   EOS_MODE_EDIT as ModeEditIcon
 } from "eos-icons-react";
 
@@ -108,6 +110,9 @@ function Overview() {
     </Category>,
     <Category key="storage" title="Storage" icon={HardDriveIcon}>
       <Storage />
+    </Category>,
+    <Category key="network" title="Network" icon={NetworkIcon}>
+      <Network />
     </Category>,
     <Category key="users" title="Users" icon={UsersIcon}>
       <Users />
