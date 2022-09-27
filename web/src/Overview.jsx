@@ -39,7 +39,7 @@ import {
   EOS_TRANSLATE as LanguagesSelectionIcon,
   EOS_VOLUME as HardDriveIcon,
   EOS_MANAGE_ACCOUNTS as UsersIcon,
-  EOS_WIFI as NetworkIcon,
+  EOS_ENDPOINTS_CONNECTED as NetworkIcon, // EOS_LAN is available in eos-icons >= 2.3
   EOS_MODE_EDIT as ModeEditIcon
 } from "eos-icons-react";
 
