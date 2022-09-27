@@ -189,13 +189,21 @@ p {
 }
 
 .network-devices-table {
+  max-width: 90%; //calc(100% - fonts.$size-base * 2);
   margin-block-start: fonts.$size-base;
 
-  .device-icon {
-    width: fonts.$size-base;
-
-    svg {
-      vertical-align: middle;
+  td.pf-c-table__toggle {
+    padding-inline: 0;
+    button {
+      padding-inline: 0;
     }
+  }
+
+  tr.pf-m-expanded td {
+    border-bottom: 1px dashed branding.$eos-bc-gray-100;
+  }
+
+  div.pf-c-table__expandable-row-content {
+    padding-block: fonts.$size-base;
   }
 }

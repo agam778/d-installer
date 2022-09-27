@@ -63,7 +63,7 @@ const fakeConnection = {
   },
   IPv6: {
     dhcp: false,
-    address: "0:0:0:0:0:ffff:c0a8:0102"
+    address: "::ffff:c0a8:0102"
   },
   addresses() {
     return [this.IPv4?.address, this.IPv6?.address].filter(ip => ip !== undefined).join(", ");
@@ -167,7 +167,7 @@ export default function Network() {
           <Thead>
             <Tr>
               <Th />
-              <Th>Device ex.</Th>
+              <Th>Device</Th>
               <Th>Type</Th>
               <Th>Status</Th>
               <Th>Addresses</Th>
@@ -193,8 +193,10 @@ export default function Network() {
                 </Tr>
                 <Tr isExpanded={detailsExpanded}>
                   <Td />
-                  <Td dataLabel={`Connection details for ${device.id}`} colSpan={3}>
-                    <ExpandableRowContent>Whatever here</ExpandableRowContent>
+                  <Td dataLabel={`Connection details for ${device.id}`} colSpan={4}>
+                    <ExpandableRowContent>
+                      Connection details and possible actions here
+                    </ExpandableRowContent>
                   </Td>
                 </Tr>
               </Tbody>
