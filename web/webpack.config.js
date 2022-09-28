@@ -49,7 +49,7 @@ module.exports = {
   resolve: {
     modules: ["node_modules", path.resolve(__dirname, 'src/lib')],
     alias: { 'font-awesome': 'font-awesome-sass/assets/stylesheets' },
-    extensions: ['', '.js', '.json', '.jsx']
+    extensions: ['', '.js', '.json', '.jsx', '.ts', '.tsx']
   },
   resolveLoader: {
     modules: ["node_modules", path.resolve(__dirname, 'src/lib')],
@@ -86,7 +86,7 @@ module.exports = {
       {
         exclude: /node_modules/,
         use: "babel-loader",
-        test: /\.(js|jsx)$/
+        test: /\.(js|jsx|ts|tsx)$/
       },
       {
         test: /\.s?css$/,
