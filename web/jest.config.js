@@ -21,7 +21,7 @@ module.exports = {
 
   // An array of glob patterns indicating a set of files for which coverage information should be collected
   collectCoverageFrom: [
-    "src/**/*.{js,jsx}",
+    "src/**/*.{js,jsx,ts,tsx}",
     "!src/lib/*.js"
   ],
 
@@ -183,7 +183,7 @@ module.exports = {
   // A map from regular expressions to paths to transformers
   // transform: undefined,
   transform: {
-    "\\.m?jsx?$": "babel-jest",
+    "\\.(m?jsx?|tsx?)$": "babel-jest",
     "\\.(css|svg)$": "jest-transform-stub"
   },
 
