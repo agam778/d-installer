@@ -23,7 +23,7 @@ import { applyMixin, withDBus } from "./mixins";
 
 const NM_DEVICE_PATH = "/org/freedesktop/NetworkManager";
 const NM_IFACE = "org.freedesktop.NetworkManager";
-const NM_DEVICE_IFACE = "org.freedesktop.NetworManager.Device";
+const NM_DEVICE_IFACE = "org.freedesktop.NetworkManager.Device";
 
 // PrimaryConnection -> path -> search for device?
 // PrimaryConnectionType
@@ -35,7 +35,6 @@ const NM_DEVICE_IFACE = "org.freedesktop.NetworManager.Device";
   }
 
   onDeviceChange(devicePath, handler) {
-    console.log("Susbribing to device", devicePath);
     return this.onObjectChanged(devicePath, NM_DEVICE_IFACE, changes => {
       console.log("Device has changed", changes);
       if ("State" in changes) {
