@@ -20,21 +20,42 @@
  */
 
 import React, { useEffect, useState } from "react";
-import { Stack, StackItem } from "@patternfly/react-core";
+import { List, ListItem, Stack, StackItem } from "@patternfly/react-core";
 import { useInstallerClient } from "./context/installer";
 
-const NetworkDevice = ({ Interface: iface, dbusPath: deviceDbusPath, ...props }) => {
+// TODO: improve props once own interna device structure/representation is defined
+const NetworkDevice = ({ Interface: iface, dbusPath: deviceDbusPath, State, ...props }) => {
   const client = useInstallerClient();
+  const [state, setState] = useState(State);
 
-  console.log(`Props for ${iface}`, props);
+  const onDeviceChange = changes => {
+    const { State: { v: newState } = {} } = changes;
 
-  const noop = () => {};
+    if (newState) setState(newState);
+  };
 
   useEffect(() => {
-    return client.network.onDeviceChange(deviceDbusPath, noop);
-  }, [client.network]);
+    return client.network.onDeviceChange(deviceDbusPath, onDeviceChange);
+  }, [client.network, deviceDbusPath]);
 
-  return <li>{iface}</li>;
+  const renderState = () => {
+    if (!state) return null;
+
+    if (state == "40") return "Connecting...";
+    if (state == "100") return <a href="#">Connected</a>;
+
+    return <a href="#">not connected</a>;
+  };
+
+  // Does not show devices in UNKNOWN and DISCONNECTED state by now
+  if (state == 0) return null;
+  if (state == 20) return null;
+
+  return (
+    <ListItem>
+      {iface} {renderState()}
+    </ListItem>
+  );
 };
 
 export default function Network() {
@@ -42,31 +63,23 @@ export default function Network() {
   const [devices, setDevices] = useState([]);
 
   useEffect(() => {
-    client.network.connectedAndActiveDevices().then(setDevices);
+    client.network.managedDevices().then(setDevices);
+    //   client.network.managedDevices().then(devices => {
+    //     // We kept connected and disconnected devices only.
+    //     setDevices(devices.filter(d => d.State >= 30));
+    //   });
   }, [client.network]);
-
-  // useEffect(() => {
-  //   const noop = (...args) => {
-  //     console.log("args", args);
-  //   };
-  //   return client.network.onStateChange(dbusPath, noop);
-  // }, [client.network]);
-
-  const renderDevices = () => {
-    return devices.map(device => <NetworkDevice {...device} />);
-  };
 
   return (
     <Stack className="overview-network">
+      <StackItem>Devices:</StackItem>
+
       <StackItem>
-        Wired <a href="#">connected</a> (127.0.0.1)
-      </StackItem>
-      <StackItem>
-        Wifi <a href="#">not connected</a>
-      </StackItem>
-      <StackItem>Devices</StackItem>
-      <StackItem>
-        <ul>{renderDevices()}</ul>
+        <List>
+          {devices.map(device => (
+            <NetworkDevice key={device.Interface} {...device} />
+          ))}
+        </List>
       </StackItem>
     </Stack>
   );

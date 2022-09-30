@@ -21,42 +21,14 @@
 
 import { applyMixin, withDBus } from "./mixins";
 
-const NM_DEVICE_PATH = "/org/freedesktop/NetworkManager";
+const NM_PATH = "/org/freedesktop/NetworkManager";
 const NM_IFACE = "org.freedesktop.NetworkManager";
 const NM_DEVICE_IFACE = "org.freedesktop.NetworkManager.Device";
-
-// PrimaryConnection -> path -> search for device?
-// PrimaryConnectionType
 
 /**
  * Network client */ class NetworkClient {
   constructor(dbusClient) {
     this._client = dbusClient;
-  }
-
-  onDeviceChange(devicePath, handler) {
-    return this.onObjectChanged(devicePath, NM_DEVICE_IFACE, changes => {
-      console.log("Device has changed", changes);
-      if ("State" in changes) {
-        console.log("nm onStateChange", changes);
-        //handler(changes);
-      }
-    });
-  }
-
-  /**
-   * Register a callback to run when properties in the Language object change
-   *
-   * @param {function} handler - callback function
-   */
-  onStateChange(handler) {
-    return this.onObjectChanged(NM_DEVICE_PATH, NM_IFACE, changes => {
-      console.log("all changes", changes);
-      if ("Devices" in changes) {
-        console.log("nm onStateChange", changes);
-        //handler(changes);
-      }
-    });
   }
 
   /**
@@ -89,32 +61,6 @@ const NM_DEVICE_IFACE = "org.freedesktop.NetworkManager.Device";
     };
   }
 
-  async connectedAndActiveDevices() {
-    const devices = await this.devices();
-    return devices.filter(device => {
-      return device.Managed && device.State === 100;
-    });
-  }
-
-  async manageDevices() {
-    const devices = await this.devices();
-    return devices.filter(device => device.Managed);
-  }
-
-  async devices() {
-    const proxy = await this.proxy(NM_IFACE);
-    let devices = [];
-
-    for (const devicePath of proxy.Devices) {
-      const device = await this.proxy(`${NM_IFACE}.Device`, devicePath);
-      devices = [...devices, { dbusPath: devicePath, ...device }];
-    }
-
-    console.log("#devices", devices, devices.length);
-
-    return devices;
-  }
-
   /**
    * Returns the computer's hostname
    *
@@ -126,6 +72,50 @@ const NM_DEVICE_IFACE = "org.freedesktop.NetworkManager.Device";
     const proxy = await this.proxy(NM_IFACE + ".Settings");
 
     return proxy.Hostname;
+  }
+
+  // TODO: document
+  async devices() {
+    const proxy = await this.proxy(NM_IFACE);
+    let devices = [];
+
+    for (const devicePath of proxy.Devices) {
+      const device = await this.proxy(NM_DEVICE_IFACE, devicePath);
+      devices = [...devices, { dbusPath: devicePath, ...device }];
+    }
+
+    return devices;
+  }
+
+  // TODO: document
+  async managedDevices() {
+    const devices = await this.devices();
+    return devices.filter(device => device.Managed);
+  }
+
+  /**
+   * Register a callback to run when properties in NetworkManager object change
+   *
+   * @param {function} handler - callback function
+   */
+  onStateChange(handler) {
+    return this.onObjectChanged(NM_PATH, NM_IFACE, changes => {
+      // console.log("Something in NetworkManager has changed", changes);
+      // handler(changes);
+    });
+  }
+
+  /**
+   * Register a callback to run when properties for a device matching given
+   * device path changes
+   *
+   * @property {string} devicePath - like "/org/freedesktop/NetworManager/Devices/1"
+   * @param {function} handler - callback function
+   */
+  onDeviceChange(devicePath, handler) {
+    return this.onObjectChanged(devicePath, NM_DEVICE_IFACE, changes => {
+      handler(changes);
+    });
   }
 
   /*
