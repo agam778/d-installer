@@ -43,6 +43,7 @@ const withDBus = {
    * @return {function} function to unsubscribe
    */
   onObjectChanged(path, iface, handler) {
+    console.log("Susbcribing to changes on", path, iface);
     const { remove } = this._client.subscribe(
       {
         path,

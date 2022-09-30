@@ -21,14 +21,43 @@
 
 import { applyMixin, withDBus } from "./mixins";
 
+const NM_DEVICE_PATH = "/org/freedesktop/NetworkManager";
 const NM_IFACE = "org.freedesktop.NetworkManager";
+const NM_DEVICE_IFACE = "org.freedesktop.NetworManager.Device";
+
+// PrimaryConnection -> path -> search for device?
+// PrimaryConnectionType
 
 /**
- * Network client
- */
-class NetworkClient {
+ * Network client */ class NetworkClient {
   constructor(dbusClient) {
     this._client = dbusClient;
+  }
+
+  onDeviceChange(devicePath, handler) {
+    console.log("Susbribing to device", devicePath);
+    return this.onObjectChanged(devicePath, NM_DEVICE_IFACE, changes => {
+      console.log("Device has changed", changes);
+      if ("State" in changes) {
+        console.log("nm onStateChange", changes);
+        //handler(changes);
+      }
+    });
+  }
+
+  /**
+   * Register a callback to run when properties in the Language object change
+   *
+   * @param {function} handler - callback function
+   */
+  onStateChange(handler) {
+    return this.onObjectChanged(NM_DEVICE_PATH, NM_IFACE, changes => {
+      console.log("all changes", changes);
+      if ("Devices" in changes) {
+        console.log("nm onStateChange", changes);
+        //handler(changes);
+      }
+    });
   }
 
   /**
@@ -59,6 +88,32 @@ class NetworkClient {
       addresses,
       hostname: await this.hostname()
     };
+  }
+
+  async connectedAndActiveDevices() {
+    const devices = await this.devices();
+    return devices.filter(device => {
+      return device.Managed && device.State === 100;
+    });
+  }
+
+  async manageDevices() {
+    const devices = await this.devices();
+    return devices.filter(device => device.Managed);
+  }
+
+  async devices() {
+    const proxy = await this.proxy(NM_IFACE);
+    let devices = [];
+
+    for (const devicePath of proxy.Devices) {
+      const device = await this.proxy(`${NM_IFACE}.Device`, devicePath);
+      devices = [...devices, { dbusPath: devicePath, ...device }];
+    }
+
+    console.log("#devices", devices, devices.length);
+
+    return devices;
   }
 
   /**

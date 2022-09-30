@@ -31,6 +31,7 @@ import Category from "./Category";
 import LanguageSelector from "./LanguageSelector";
 import Storage from "./Storage";
 import Users from "./Users";
+import Network from "./Network";
 import Popup from "./Popup";
 
 import {
@@ -38,7 +39,8 @@ import {
   EOS_TRANSLATE as LanguagesSelectionIcon,
   EOS_VOLUME as HardDriveIcon,
   EOS_MANAGE_ACCOUNTS as UsersIcon,
-  EOS_MODE_EDIT as ModeEditIcon
+  EOS_MODE_EDIT as ModeEditIcon,
+  EOS_WIFI as NetworkSectionIcon
 } from "eos-icons-react";
 
 const ChangeProductButton = () => {
@@ -98,7 +100,7 @@ const InstallButton = () => {
 function Overview() {
   const { selectedProduct } = useSoftware();
 
-  if (selectedProduct === null) {
+  if (!selectedProduct || selectedProduct === null) {
     return <Navigate to="/products" />;
   }
 
@@ -108,6 +110,9 @@ function Overview() {
     </Category>,
     <Category key="storage" title="Storage" icon={HardDriveIcon}>
       <Storage />
+    </Category>,
+    <Category key="network" title="Network" icon={NetworkSectionIcon}>
+      <Network />
     </Category>,
     <Category key="users" title="Users" icon={UsersIcon}>
       <Users />
