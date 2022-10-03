@@ -24,6 +24,7 @@ import { applyMixin, withDBus } from "./mixins";
 const NM_PATH = "/org/freedesktop/NetworkManager";
 const NM_IFACE = "org.freedesktop.NetworkManager";
 const NM_DEVICE_IFACE = "org.freedesktop.NetworkManager.Device";
+const NM_ACTIVE_CONNECTION_IFACE = "org.freedesktop.NetworkManager.Connection.Active";
 
 /**
  * Network client */ class NetworkClient {
@@ -75,13 +76,43 @@ const NM_DEVICE_IFACE = "org.freedesktop.NetworkManager.Device";
   }
 
   // TODO: document
+  formattedAddress(ip) {
+    return `${ip.address.v}/${ip.prefix.v}`;
+  }
+
+  async wiredDevices() {
+    const devices = await this.devices();
+    return devices.filter(d => d.type === 1);
+  }
+
+  // TODO: document
   async devices() {
     const proxy = await this.proxy(NM_IFACE);
     let devices = [];
 
-    for (const devicePath of proxy.Devices) {
-      const device = await this.proxy(NM_DEVICE_IFACE, devicePath);
-      devices = [...devices, { dbusPath: devicePath, ...device }];
+    for (const path of proxy.Devices) {
+      let ipAddresses = [];
+
+      const device = await this.proxy(NM_DEVICE_IFACE, path);
+      const activeConnectionPath = device.ActiveConnection;
+      const activeConnection = activeConnectionPath !== "/";
+
+      if (activeConnection) {
+        const addresses = await this.#address(activeConnectionPath);
+        ipAddresses = addresses.map(a => this.formattedAddress(a));
+      }
+
+      const d = {
+        path,
+        activeConnection,
+        activeConnectionPath,
+        addresses: ipAddresses,
+        iface: device.Interface,
+        type: device.DeviceType,
+        managed: device.Managed
+      };
+
+      devices = [...devices, d];
     }
 
     return devices;
@@ -90,7 +121,33 @@ const NM_DEVICE_IFACE = "org.freedesktop.NetworkManager.Device";
   // TODO: document
   async managedDevices() {
     const devices = await this.devices();
-    return devices.filter(device => device.Managed);
+    return devices.filter(device => device.managed);
+  }
+
+  /**
+   * Register a callback to run when properties in NetworkManager object change
+   *
+   * @param {function} handler - callback function
+   */
+  onActiveConnectionsChange(handler) {
+    return this.onObjectChanged(NM_PATH, NM_IFACE, changes => {
+      if ("ActiveConnections" in changes) {
+        handler(changes.ActiveConnections.v);
+      }
+    });
+  }
+
+  /**
+   * Register a callback to run when properties in NetworkManager object change
+   *
+   * @param {function} handler - callback function
+   */
+  onDevicesChange(handler) {
+    return this.onObjectChanged(NM_PATH, NM_IFACE, changes => {
+      if ("Devices" in changes) {
+        handler(changes.Devices);
+      }
+    });
   }
 
   /**
@@ -100,9 +157,60 @@ const NM_DEVICE_IFACE = "org.freedesktop.NetworkManager.Device";
    */
   onStateChange(handler) {
     return this.onObjectChanged(NM_PATH, NM_IFACE, changes => {
-      // console.log("Something in NetworkManager has changed", changes);
-      // handler(changes);
+      console.log("Something in NetworkManager has changed", changes);
+      handler(changes);
     });
+  }
+
+  // getDevices();
+  // [{
+  //   path:,
+  //   iface:,
+  //   type:,
+  //   ...
+  // }]
+  // getActiveConnections();
+  // {
+  //   path:,
+  //   devicesPaths: ["",""],
+  // }
+  //
+  //
+  // ethernetConnected = () => {
+  //   const lanDevices = getDevices().filter(d => d.type === NM_LAN).map(d => d.path);
+  //   const connectedDevices = getActiveConnections().flatmap(c => c.devicesPath);
+  //
+  //   return lanDevices & connectedDevices;
+  // }
+  //
+  //
+  // wifiConnected = () => {
+  //   const lanDevices = getDevices().filter(d => d.type === NM_WIFI).map(d => d.path);
+  //   const connectedDevices = getActiveConnections().flatmap(c => c.devicesPath);
+  //
+  //   return lanDevices & connectedDevices;
+  // }
+  //
+
+  // TODO: document
+  async activeConnections() {
+    const paths = await this.#connections();
+    let connections = [];
+
+    for (const path of paths) {
+      const connection = await this.proxy(NM_ACTIVE_CONNECTION_IFACE, path);
+
+      connections = [
+        ...connections,
+        {
+          path,
+          devicesPaths: connection.Devices,
+          address: this.#address(path)
+        }
+      ];
+    }
+
+    return connections;
   }
 
   /**

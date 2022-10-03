@@ -22,6 +22,15 @@
 import React, { useEffect, useState } from "react";
 import { List, ListItem, Stack, StackItem } from "@patternfly/react-core";
 import { useInstallerClient } from "./context/installer";
+import { useCancellablePromise } from "./utils";
+
+export const ETHERNET = 1;
+export const WIRELESS = 2;
+
+const DEVICE_TYPES = {
+  ETHERNET,
+  WIRELESS
+};
 
 // TODO: improve props once own interna device structure/representation is defined
 const NetworkDevice = ({ Interface: iface, dbusPath: deviceDbusPath, State, ...props }) => {
@@ -35,6 +44,7 @@ const NetworkDevice = ({ Interface: iface, dbusPath: deviceDbusPath, State, ...p
   };
 
   useEffect(() => {
+    // TODO: Unsuscribe also if a device change its state to 0, 10, or 20
     return client.network.onDeviceChange(deviceDbusPath, onDeviceChange);
   }, [client.network, deviceDbusPath]);
 
@@ -44,12 +54,11 @@ const NetworkDevice = ({ Interface: iface, dbusPath: deviceDbusPath, State, ...p
     if (state == "40") return "Connecting...";
     if (state == "100") return <a href="#">Connected</a>;
 
-    return <a href="#">not connected</a>;
+    return <a href="#">not connected ({state})</a>;
   };
 
-  // Does not show devices in UNKNOWN and DISCONNECTED state by now
-  if (state == 0) return null;
-  if (state == 20) return null;
+  // Does not show devices in UNKNOWN, UNMANAGED, AND UNAVAILABLE states
+  if ([0, 10, 20].includes(state)) return null;
 
   return (
     <ListItem>
@@ -58,28 +67,59 @@ const NetworkDevice = ({ Interface: iface, dbusPath: deviceDbusPath, State, ...p
   );
 };
 
+const WiredConnectionStatus = ({ devices }) => {
+  const connectedDevices = devices.filter(d => d.activeConnection);
+
+  console.log("Connected WIRED devices", connectedDevices);
+
+  if (connectedDevices.length === 0) {
+    return "Wired not connnected";
+  }
+
+  return `Wired connected - ${connectedDevices.flatMap(d => d.addresses).join(", ")}`;
+};
+
+const WiFiConnectionStatus = ({ devices }) => {
+  const connectedDevices = devices.filter(d => d.activeConnection);
+
+  console.log("Connected WiFi devices", connectedDevices);
+
+  if (connectedDevices.length === 0) {
+    return "WiFi not connnected";
+  }
+
+  return `WiFi connected - ${connectedDevices.flatMap(d => d.addresses).join(", ")}`;
+};
+
 export default function Network() {
   const client = useInstallerClient();
+  const { cancellablePromise } = useCancellablePromise();
+  const [wiredDevices, setWiredDevices] = useState([]);
+  const [wifiDevices, setWifiDevices] = useState([]);
   const [devices, setDevices] = useState([]);
+  //const [connections, setConnections] = useState([]);
 
   useEffect(() => {
-    client.network.managedDevices().then(setDevices);
-    //   client.network.managedDevices().then(devices => {
-    //     // We kept connected and disconnected devices only.
-    //     setDevices(devices.filter(d => d.State >= 30));
-    //   });
-  }, [client.network]);
+    cancellablePromise(client.network.devices()).then(setDevices);
+    // client.network.activeConnections().then(setConnections);
+    return client.network.onStateChange(async changes => {
+      console.log("nm activeConnections has changed", changes);
+      cancellablePromise(client.network.devices())
+        .then(result => {
+          console.log("GOOD", result);
+          setDevices(result);
+        })
+        .catch(e => console.log("BAD", e));
+    });
+  }, [client.network, cancellablePromise]);
 
   return (
     <Stack className="overview-network">
-      <StackItem>Devices:</StackItem>
-
       <StackItem>
-        <List>
-          {devices.map(device => (
-            <NetworkDevice key={device.Interface} {...device} />
-          ))}
-        </List>
+        <WiredConnectionStatus devices={devices.filter(d => d.type === DEVICE_TYPES.ETHERNET)} />
+      </StackItem>
+      <StackItem>
+        <WiFiConnectionStatus devices={devices.filter(d => d.type === DEVICE_TYPES.WIRELESS)} />
       </StackItem>
     </Stack>
   );
