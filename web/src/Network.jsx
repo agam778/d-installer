@@ -32,6 +32,11 @@ const DEVICE_TYPES = {
   WIRELESS
 };
 
+const CONNECTION_TYPES = {
+  ETHERNET: "802-3-ethernet",
+  WIFI: "802-11-wireless"
+};
+
 // TODO: improve props once own internal device structure/representation is defined
 const NetworkDevice = ({ Interface: iface, dbusPath: deviceDbusPath, State, ...props }) => {
   const client = useInstallerClient();
@@ -67,61 +72,76 @@ const NetworkDevice = ({ Interface: iface, dbusPath: deviceDbusPath, State, ...p
   );
 };
 
-const WiredConnectionStatus = ({ devices }) => {
-  const connectedDevices = devices.filter(d => d.activeConnection);
-
-  if (connectedDevices.length === 0) {
+const WiredConnectionStatus = ({ connections }) => {
+  if (connections.length === 0) {
     return "Wired not connnected";
   }
 
-  return `Wired connected - ${connectedDevices.flatMap(d => d.addresses).join(", ")}`;
+  return `Wired connected - ${connections.flatMap(c => c.addresses).join(", ")}`;
 };
 
-const WiFiConnectionStatus = ({ devices }) => {
-  const connectedDevices = devices.filter(d => d.activeConnection);
+const WiFiConnectionStatus = ({ connections }) => {
+  const state = connections.map(c => c.state).join(", ");
 
-  if (connectedDevices.length === 0) {
+  if (connections.length === 0) {
     return (
       <>
-        Wifi <a href="#">not connected</a>
+        ({state}) Wifi <a href="#">not connected</a>
       </>
     );
   }
 
-  return `WiFi connected - ${connectedDevices.flatMap(d => d.addresses).join(", ")}`;
+  // TODO: show the SSID
+  return (
+    <>
+      ({state}) WiFi connected {connections.flatMap(c => c.addresses).join(", ")};
+    </>
+  );
 };
 
 export default function Network() {
   const client = useInstallerClient();
   const { cancellablePromise } = useCancellablePromise();
-  const [devices, setDevices] = useState([]);
-  //const [connections, setConnections] = useState(undefined);
+  const [connections, setConnections] = useState(undefined);
 
   useEffect(() => {
-    cancellablePromise(client.network.devices()).then(setDevices);
+    // TODO: FIXME: Something like ....
+    //   client.network.connections(setConnection);
+    //   return client.network.onConnectionsChange(() => {
+    //     // change the state acccordingly
+    //   });
+
+    const loadConnections = async () => {
+      console.log("reloading connections");
+      cancellablePromise(client.network.activeConnections())
+        .then(setConnections)
+        .catch(e => console.log("Something went wrong", e));
+    };
+
+    loadConnections();
     // client.network.activeConnections().then(setConnections);
     // return client.network.onStateChange(async changes => {
     return client.network.onStateChange(changes => {
-      cancellablePromise(client.network.devices())
-        .then(result => {
-          console.log("GOOD", result);
-          setDevices(result);
-        })
-        .catch(e => console.log("BAD", e));
+      console.log("An active connection has changed", changes);
+      loadConnections();
     });
   }, [client.network, cancellablePromise]);
 
+  console.log("connections", connections);
   if (!connections) {
     return "Retrieving network information...";
   }
 
+  const activeWiredConnections = connections.filter(c => c.type === CONNECTION_TYPES.ETHERNET);
+  const activeWifiConnections = connections.filter(c => c.type === CONNECTION_TYPES.WIFI);
+
   return (
     <Stack className="overview-network">
       <StackItem>
-        <WiredConnectionStatus devices={devices.filter(d => d.type === DEVICE_TYPES.ETHERNET)} />
+        <WiredConnectionStatus connections={activeWiredConnections} />
       </StackItem>
       <StackItem>
-        <WiFiConnectionStatus devices={devices.filter(d => d.type === DEVICE_TYPES.WIRELESS)} />
+        <WiFiConnectionStatus connections={activeWifiConnections} />
       </StackItem>
     </Stack>
   );

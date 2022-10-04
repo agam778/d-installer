@@ -24,6 +24,8 @@ import { applyMixin, withDBus } from "./mixins";
 const NM_PATH = "/org/freedesktop/NetworkManager";
 const NM_IFACE = "org.freedesktop.NetworkManager";
 const NM_DEVICE_IFACE = "org.freedesktop.NetworkManager.Device";
+const NM_IP4CONFIG_PATH = "/org/freedesktop/NetworkManager/IP4Config";
+const NM_IP4CONFIG_IFACE = "org.freedesktop.NetworkManager.IP4Config";
 const NM_ACTIVE_CONNECTION_IFACE = "org.freedesktop.NetworkManager.Connection.Active";
 
 /**
@@ -120,10 +122,7 @@ const NM_ACTIVE_CONNECTION_IFACE = "org.freedesktop.NetworkManager.Connection.Ac
     let devices = {};
 
     for (const path of proxy.Devices) {
-      devices = {
-        ...devices,
-        [path]: device
-      };
+      devices = [...devices, this.device(path)];
     }
 
     return devices;
@@ -203,6 +202,23 @@ const NM_ACTIVE_CONNECTION_IFACE = "org.freedesktop.NetworkManager.Connection.Ac
   // }
   //
 
+  async connection(path) {
+    const connection = await this.proxy(NM_ACTIVE_CONNECTION_IFACE, path);
+    let addresses = [];
+
+    if (connection.State == 2) {
+      const ip4Config = await this.proxy(NM_IP4CONFIG_IFACE, connection.Ip4Config);
+      addresses = ip4Config.AddressData.map(this.formattedAddress);
+    }
+
+    return {
+      path,
+      addresses,
+      type: connection.Type,
+      state: connection.State
+    };
+  }
+
   // TODO: document
   async activeConnections() {
     const proxy = await this.proxy(NM_IFACE);
@@ -210,16 +226,7 @@ const NM_ACTIVE_CONNECTION_IFACE = "org.freedesktop.NetworkManager.Connection.Ac
     let connections = [];
 
     for (const path of proxy.ActiveConnections) {
-      const connection = await this.proxy(NM_ACTIVE_CONNECTION_IFACE, path);
-
-      connections = [
-        ...connections,
-        {
-          path,
-          devicesPaths: connection.Devices,
-          address: this.#address(path)
-        }
-      ];
+      connections = [...connections, await this.connection(path)];
     }
 
     return connections;
@@ -238,6 +245,19 @@ const NM_ACTIVE_CONNECTION_IFACE = "org.freedesktop.NetworkManager.Connection.Ac
     });
   }
 
+  /**
+   * Register a callback to run when properties for a device matching given
+   * device path changes
+   *
+   * @property {string} devicePath - like "/org/freedesktop/NetworManager/Devices/1"
+   * @param {function} handler - callback function
+   */
+  onActiveConnectionChange(path, handler) {
+    return this.onObjectChanged(path, NM_ACTIVE_CONNECTION_IFACE, changes => {
+      console.log("Active connection changed", changes);
+      handler(changes);
+    });
+  }
   /*
    * Returns list of active NM connections
    *
