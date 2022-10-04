@@ -24,15 +24,15 @@ import { List, ListItem, Stack, StackItem } from "@patternfly/react-core";
 import { useInstallerClient } from "./context/installer";
 import { useCancellablePromise } from "./utils";
 
-export const ETHERNET = 1;
-export const WIRELESS = 2;
+const ETHERNET = 1;
+const WIRELESS = 2;
 
 const DEVICE_TYPES = {
   ETHERNET,
   WIRELESS
 };
 
-// TODO: improve props once own interna device structure/representation is defined
+// TODO: improve props once own internal device structure/representation is defined
 const NetworkDevice = ({ Interface: iface, dbusPath: deviceDbusPath, State, ...props }) => {
   const client = useInstallerClient();
   const [state, setState] = useState(State);
@@ -70,8 +70,6 @@ const NetworkDevice = ({ Interface: iface, dbusPath: deviceDbusPath, State, ...p
 const WiredConnectionStatus = ({ devices }) => {
   const connectedDevices = devices.filter(d => d.activeConnection);
 
-  console.log("Connected WIRED devices", connectedDevices);
-
   if (connectedDevices.length === 0) {
     return "Wired not connnected";
   }
@@ -82,10 +80,12 @@ const WiredConnectionStatus = ({ devices }) => {
 const WiFiConnectionStatus = ({ devices }) => {
   const connectedDevices = devices.filter(d => d.activeConnection);
 
-  console.log("Connected WiFi devices", connectedDevices);
-
   if (connectedDevices.length === 0) {
-    return "WiFi not connnected";
+    return (
+      <>
+        Wifi <a href="#">not connected</a>
+      </>
+    );
   }
 
   return `WiFi connected - ${connectedDevices.flatMap(d => d.addresses).join(", ")}`;
@@ -94,16 +94,14 @@ const WiFiConnectionStatus = ({ devices }) => {
 export default function Network() {
   const client = useInstallerClient();
   const { cancellablePromise } = useCancellablePromise();
-  const [wiredDevices, setWiredDevices] = useState([]);
-  const [wifiDevices, setWifiDevices] = useState([]);
   const [devices, setDevices] = useState([]);
-  //const [connections, setConnections] = useState([]);
+  //const [connections, setConnections] = useState(undefined);
 
   useEffect(() => {
     cancellablePromise(client.network.devices()).then(setDevices);
     // client.network.activeConnections().then(setConnections);
-    return client.network.onStateChange(async changes => {
-      console.log("nm activeConnections has changed", changes);
+    // return client.network.onStateChange(async changes => {
+    return client.network.onStateChange(changes => {
       cancellablePromise(client.network.devices())
         .then(result => {
           console.log("GOOD", result);
@@ -112,6 +110,10 @@ export default function Network() {
         .catch(e => console.log("BAD", e));
     });
   }, [client.network, cancellablePromise]);
+
+  if (!connections) {
+    return "Retrieving network information...";
+  }
 
   return (
     <Stack className="overview-network">

@@ -80,39 +80,50 @@ const NM_ACTIVE_CONNECTION_IFACE = "org.freedesktop.NetworkManager.Connection.Ac
     return `${ip.address.v}/${ip.prefix.v}`;
   }
 
-  async wiredDevices() {
-    const devices = await this.devices();
-    return devices.filter(d => d.type === 1);
+  async device(path) {
+    const device = await this.proxy(NM_DEVICE_IFACE, path);
+
+    let ipAddresses = [];
+
+    const activeConnectionPath = device.ActiveConnection;
+    const activeConnection = activeConnectionPath !== "/";
+    //const ip4ConfigPath = device.Ip4Config;
+    //const activeConnection = ip4ConfigPath !== "/";
+    let addresses = [];
+
+    if (activeConnection) {
+      try {
+        addresses = await this.#address(activeConnectionPath);
+        // const ipConfig = await this.proxy(NM_IFACE + ".IP4Config", ip4ConfigPath);
+        // addresses = ipConfig.AddressData;
+      } catch (e) {
+        console.log("error getting addresses for", path, e);
+      }
+
+      ipAddresses = addresses.map(a => this.formattedAddress(a));
+    }
+
+    return {
+      path,
+      activeConnection,
+      activeConnectionPath,
+      addresses: ipAddresses,
+      iface: device.Interface,
+      type: device.DeviceType,
+      managed: device.Managed
+    };
   }
 
   // TODO: document
   async devices() {
     const proxy = await this.proxy(NM_IFACE);
-    let devices = [];
+    let devices = {};
 
     for (const path of proxy.Devices) {
-      let ipAddresses = [];
-
-      const device = await this.proxy(NM_DEVICE_IFACE, path);
-      const activeConnectionPath = device.ActiveConnection;
-      const activeConnection = activeConnectionPath !== "/";
-
-      if (activeConnection) {
-        const addresses = await this.#address(activeConnectionPath);
-        ipAddresses = addresses.map(a => this.formattedAddress(a));
-      }
-
-      const d = {
-        path,
-        activeConnection,
-        activeConnectionPath,
-        addresses: ipAddresses,
-        iface: device.Interface,
-        type: device.DeviceType,
-        managed: device.Managed
+      devices = {
+        ...devices,
+        [path]: device
       };
-
-      devices = [...devices, d];
     }
 
     return devices;
@@ -194,10 +205,11 @@ const NM_ACTIVE_CONNECTION_IFACE = "org.freedesktop.NetworkManager.Connection.Ac
 
   // TODO: document
   async activeConnections() {
-    const paths = await this.#connections();
+    const proxy = await this.proxy(NM_IFACE);
+
     let connections = [];
 
-    for (const path of paths) {
+    for (const path of proxy.ActiveConnections) {
       const connection = await this.proxy(NM_ACTIVE_CONNECTION_IFACE, path);
 
       connections = [
