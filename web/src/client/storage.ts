@@ -20,30 +20,46 @@
  */
 
 import cockpit from "../lib/cockpit";
-import { applyMixin, withDBus, withStatus } from "./mixins";
+import { DBusClient } from "./dbus";
+import { WithStatus } from "./mixins";
 
 const STORAGE_SERVICE = "org.opensuse.DInstaller.Storage";
 const STORAGE_PROPOSAL_IFACE = "org.opensuse.DInstaller.Storage.Proposal1";
 const STORAGE_PROPOSAL_PATH = "/org/opensuse/DInstaller/Storage/Proposal1";
 
+type StorageAction = {
+  text: string,
+  subvol: boolean,
+  delete: boolean
+}
+
+type StorageProposal = {
+  availableDevices: StorageDevice[],
+  candidateDevices: string[],
+  lvm: boolean
+}
+
+type StorageDevice = {
+  id: string,
+  label: string
+}
+
 /**
  * Storage client
  */
 class StorageClient {
-  constructor() {
-    this._client = cockpit.dbus(STORAGE_SERVICE, {
-      bus: "system", superuser: "try"
-    });
+  client: DBusClient;
+
+  constructor(dbusClient?: DBusClient) {
+    this.client = dbusClient || new DBusClient(STORAGE_SERVICE);
   }
 
   /**
    * Return the actions for the current proposal
-   *
-   * @return {Promise.<Array.<Object>>}
    */
-  async getStorageActions() {
-    const proxy = await this.proxy(STORAGE_PROPOSAL_IFACE);
-    return proxy.Actions.map(action => {
+  async getStorageActions(): Promise<StorageAction[]> {
+    const proxy = await this.client.proxy(STORAGE_PROPOSAL_IFACE);
+    return proxy.Actions.map((action: any) => {
       const { Text: { v: textVar }, Subvol: { v: subvolVar }, Delete: { v: deleteVar } } = action;
       return { text: textVar, subvol: subvolVar, delete: deleteVar };
     });
@@ -51,11 +67,9 @@ class StorageClient {
 
   /**
    * Return storage proposal settings
-   *
-   * @return {Promise.<Object>}
    */
-  async getStorageProposal() {
-    const proxy = await this.proxy(STORAGE_PROPOSAL_IFACE);
+  async getStorageProposal(): Promise<StorageProposal> {
+    const proxy = await this.client.proxy(STORAGE_PROPOSAL_IFACE);
     return {
       availableDevices: proxy.AvailableDevices.map(([id, label]) => {
         return { id, label };
@@ -66,7 +80,7 @@ class StorageClient {
   }
 
   async calculateStorageProposal({ candidateDevices }) {
-    const proxy = await this.proxy(STORAGE_PROPOSAL_IFACE);
+    const proxy = await this.client.proxy(STORAGE_PROPOSAL_IFACE);
     return proxy.Calculate({
       CandidateDevices: cockpit.variant("as", candidateDevices)
     });
@@ -75,13 +89,13 @@ class StorageClient {
   /**
    * Register a callback to run when properties in the Actions object change
    *
-   * @param {function} handler - callback function
+   * @param handler - callback function
    */
-  onActionsChange(handler) {
-    return this.onObjectChanged(STORAGE_PROPOSAL_PATH, STORAGE_PROPOSAL_IFACE, changes => {
+  onActionsChange(handler: ((actions: StorageAction[]) => void)) {
+    return this.client.onObjectChanged(STORAGE_PROPOSAL_PATH, STORAGE_PROPOSAL_IFACE, (changes: any) => {
       const { Actions: actions } = changes;
       if (actions !== undefined) {
-        const newActions = actions.v.map(action => {
+        const newActions = actions.v.map((action: any) => {
           const { Text: textVar, Subvol: subvolVar, Delete: deleteVar } = action;
           return { text: textVar.v, subvol: subvolVar.v, delete: deleteVar.v };
         });
@@ -93,15 +107,14 @@ class StorageClient {
   /**
    * Register a callback to run when properties in the Storage Proposal object change
    *
-   * @param {function} handler - callback function
+   * @param handler - callback function
    */
-  onStorageProposalChange(handler) {
-    return this.onObjectChanged(STORAGE_PROPOSAL_PATH, STORAGE_PROPOSAL_IFACE, changes => {
-      const [selected] = changes.CandidateDevices.v;
+  onStorageProposalChange(handler: ((selected: boolean) => void)) {
+    return this.client.onObjectChanged(STORAGE_PROPOSAL_PATH, STORAGE_PROPOSAL_IFACE, changes => {
+      const [selected] = (changes.CandidateDevices as any).v;
       handler(selected);
     });
   }
 }
 
-applyMixin(StorageClient, withDBus, withStatus(STORAGE_PROPOSAL_PATH));
-export default StorageClient;
+export default WithStatus(StorageClient, STORAGE_PROPOSAL_PATH);

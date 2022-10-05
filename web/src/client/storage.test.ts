@@ -20,12 +20,12 @@
  */
 
 import StorageClient from "./storage";
-import cockpit from "../lib/cockpit";
+import { DBusClient } from "./dbus";
 
 // NOTE: should we export them?
 const STORAGE_PROPOSAL_IFACE = "org.opensuse.DInstaller.Storage.Proposal1";
 
-const dbusClient = {};
+const dbusClient = new DBusClient("");
 const storageProposalProxy = {
   wait: jest.fn(),
   AvailableDevices: [
@@ -44,7 +44,6 @@ const storageProposalProxy = {
 };
 
 beforeEach(() => {
-  cockpit.dbus = jest.fn().mockImplementation(() => dbusClient);
   dbusClient.proxy = jest.fn().mockImplementation(iface => {
     if (iface === STORAGE_PROPOSAL_IFACE) return storageProposalProxy;
   });
