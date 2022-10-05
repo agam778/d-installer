@@ -88,7 +88,7 @@ function WithProgress<TBase extends WithDBusClient>(Base: TBase, object_path: st
      * @param {function} handler - callback function
      * @return {function} function to disable the callback
      */
-    onProgressChange(handler: ChangesFn) {
+    onProgressChange(handler: (value: Progress) => void) {
       return this.client.onObjectChanged(object_path, PROGRESS_IFACE, (changes: any) => {
         const { TotalSteps, CurrentStep, Finished } = changes;
         if (TotalSteps === undefined && CurrentStep === undefined && Finished === undefined) {

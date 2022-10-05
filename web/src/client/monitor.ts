@@ -19,7 +19,7 @@
  * find current contact information at www.suse.com.
  */
 
-import { DBusClient } from "./dbus";
+import { DBusClient, RemoveFn } from "./dbus";
 const DBUS_SERVICE = "org.freedesktop.DBus";
 const MATCHER = { interface: DBUS_SERVICE, member: "NameOwnerChanged" };
 
@@ -44,7 +44,7 @@ class Monitor {
    * @param {function} handler - function to execute. It receives true if the service was connected
    *  and false if the service was disconnected.
    */
-  onConnectionChange(handler: (connected: boolean) => void) {
+  onConnectionChange(handler: (connected: boolean) => void): RemoveFn {
     return this.client.onSignal(MATCHER, (_path, _interface, _signal, args) => {
       const [service, , newOwner] = args;
       if (service === this.watchedService) {
@@ -55,4 +55,4 @@ class Monitor {
   }
 }
 
-export default Monitor;
+export { Monitor };

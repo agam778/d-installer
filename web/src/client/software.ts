@@ -20,16 +20,22 @@
  */
 
 import { WithStatus, WithProgress } from "./mixins";
-import { DBusClient } from "./dbus";
+import { DBusClient, DBusChanges } from "./dbus";
 
 const SOFTWARE_SERVICE = "org.opensuse.DInstaller.Software";
 const SOFTWARE_IFACE = "org.opensuse.DInstaller.Software1";
 const SOFTWARE_PATH = "/org/opensuse/DInstaller/Software1";
 
+type Product = {
+  id: string,
+  name: string,
+  description: string
+}
+
 /**
  * Software client
  */
-class SoftwareClient {
+class Client {
   client: DBusClient;
 
   constructor(dbusClient?: DBusClient) {
@@ -38,23 +44,19 @@ class SoftwareClient {
 
   /**
    * Return the list of available products
-   *
-   * @return {Promise.<Array>}
    */
-  async getProducts() {
+  async getProducts(): Promise<Product[]> {
     const proxy = await this.client.proxy(SOFTWARE_IFACE);
-    return proxy.AvailableBaseProducts.map(product => {
+    return proxy.AvailableBaseProducts.map((product: [string, string, object]) => {
       const [id, name, meta] = product;
-      return { id, name, description: meta.description?.v };
+      return { id, name, description: (meta as any).description?.v };
     });
   }
 
   /**
    * Return the selected product
-   *
-   * @return {Promise.<Object|null>}
    */
-  async getSelectedProduct() {
+  async getSelectedProduct(): Promise<Product> {
     const products = await this.getProducts();
     const proxy = await this.client.proxy(SOFTWARE_IFACE);
     if (proxy.SelectedBaseProduct === "") {
@@ -63,7 +65,10 @@ class SoftwareClient {
     return products.find(product => product.id === proxy.SelectedBaseProduct);
   }
 
-  async selectProduct(id) {
+  /**
+  * Selects the product with the given ID
+  */
+  async selectProduct(id: string) {
     const proxy = await this.client.proxy(SOFTWARE_IFACE);
     return proxy.SelectProduct(id);
   }
@@ -73,14 +78,15 @@ class SoftwareClient {
    *
    * @param {function} handler - callback function
    */
-  onProductChange(handler) {
-    return this.client.onObjectChanged(SOFTWARE_PATH, SOFTWARE_IFACE, changes => {
+  onProductChange(handler: (id: string) => void) {
+    return this.client.onObjectChanged(SOFTWARE_PATH, SOFTWARE_IFACE, (changes: DBusChanges) => {
       if ("SelectedBaseProduct" in changes) {
-        const selected = changes.SelectedBaseProduct.v;
+        const selected = changes.SelectedBaseProduct.v as string;
         handler(selected);
       }
     });
   }
 }
 
-export default WithProgress(WithStatus(SoftwareClient, SOFTWARE_PATH), SOFTWARE_PATH);
+const SoftwareClient = WithProgress(WithStatus(Client, SOFTWARE_PATH), SOFTWARE_PATH);
+export { SoftwareClient };

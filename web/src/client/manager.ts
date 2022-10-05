@@ -21,7 +21,7 @@
 
 import cockpit from "../lib/cockpit";
 import { WithStatus, WithProgress } from "./mixins";
-import { DBusClient } from "./dbus";
+import { DBusClient, DBusChanges } from "./dbus";
 
 const MANAGER_SERVICE = "org.opensuse.DInstaller";
 const MANAGER_IFACE = "org.opensuse.DInstaller.Manager1";
@@ -30,7 +30,7 @@ const MANAGER_PATH = "/org/opensuse/DInstaller/Manager1";
 /**
  * Manager client
  */
-class ManagerClient {
+class Client {
   client: DBusClient;
 
   constructor(dbusClient?: DBusClient) {
@@ -75,10 +75,10 @@ class ManagerClient {
    * @param handler - callback function
    * @return function to disable callback
    */
-  onPhaseChange(handler: (phase: string) => void): () => void {
-    return this.client.onObjectChanged(MANAGER_PATH, MANAGER_IFACE, (changes: object) => {
+  onPhaseChange(handler: (phase: number) => void): () => void {
+    return this.client.onObjectChanged(MANAGER_PATH, MANAGER_IFACE, (changes: DBusChanges) => {
       if ("CurrentInstallationPhase" in changes) {
-        handler((changes as any).CurrentInstallationPhase.v);
+        handler(changes.CurrentInstallationPhase.v as number);
       }
     });
   }
@@ -91,4 +91,5 @@ class ManagerClient {
   }
 }
 
-export default WithProgress(WithStatus(ManagerClient, MANAGER_PATH), MANAGER_PATH);
+const ManagerClient = WithProgress(WithStatus(Client, MANAGER_PATH), MANAGER_PATH);
+export { ManagerClient };

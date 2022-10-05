@@ -19,11 +19,18 @@
  * find current contact information at www.suse.com.
  */
 
-import { DBusClient } from "./dbus";
+import { DBusClient, ChangesFn, DBusChanges } from "./dbus";
 
 const LANGUAGE_SERVICE = "org.opensuse.DInstaller.Language";
 const LANGUAGE_IFACE = "org.opensuse.DInstaller.Language1";
 const LANGUAGE_PATH = "/org/opensuse/DInstaller/Language1";
+
+type Language = {
+  id: string,
+  name: string
+}
+
+type LangID = string;
 
 /**
  * Language client
@@ -38,7 +45,7 @@ class LanguageClient {
   /**
    * Return the list of available languages
    */
-  async getLanguages(): Promise<{ id: string, name: string }> {
+  async getLanguages(): Promise<Language> {
     const proxy = await this.client.proxy(LANGUAGE_IFACE);
     return proxy.AvailableLanguages.map((lang: string[]) => {
       const [id, name] = lang;
@@ -49,7 +56,7 @@ class LanguageClient {
   /**
    * Return the languages selected for installation
    */
-  async getSelectedLanguages(): Promise<string> {
+  async getSelectedLanguages(): Promise<LangID[]> {
     const proxy = await this.client.proxy(LANGUAGE_IFACE);
     return proxy.MarkedForInstall;
   }
@@ -59,7 +66,7 @@ class LanguageClient {
    *
    * @param langIDs - Identifier of languages to install
    */
-  async setLanguages(langIDs: string[]): Promise<void> {
+  async setLanguages(langIDs: LangID[]): Promise<void> {
     const proxy = await this.client.proxy(LANGUAGE_IFACE);
     return proxy.ToInstall(langIDs);
   }
@@ -69,12 +76,16 @@ class LanguageClient {
    *
    * @param {function} handler - callback function
    */
-  onLanguageChange(handler) {
-    return this.client.onObjectChanged(LANGUAGE_PATH, LANGUAGE_IFACE, changes => {
+  onLanguageChange(handler: ChangesFn) {
+    return this.client.onObjectChanged(LANGUAGE_PATH, LANGUAGE_IFACE, (changes: DBusChanges) => {
       const selected = changes.MarkedForInstall.v[0];
       handler({ current: selected });
     });
   }
 }
 
-export default LanguageClient;
+export {
+  LanguageClient,
+  type Language,
+  type LangID
+};

@@ -19,7 +19,7 @@
  * find current contact information at www.suse.com.
  */
 
-import LanguageClient from "./language";
+import { LanguageClient } from "./language";
 import { DBusClient } from "./dbus";
 
 const LANGUAGE_IFACE = "org.opensuse.DInstaller.Language1";

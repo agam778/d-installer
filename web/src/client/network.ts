@@ -134,4 +134,4 @@ class NetworkClient {
   }
 }
 
-export default NetworkClient;
+export { NetworkClient };

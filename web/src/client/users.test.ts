@@ -19,7 +19,7 @@
  * find current contact information at www.suse.com.
  */
 
-import UsersClient from "./users";
+import { UsersClient } from "./users";
 import { DBusClient } from "./dbus";
 
 const USERS_IFACE = "org.opensuse.DInstaller.Users1";
@@ -156,7 +156,7 @@ describe("#setRootPassword", () => {
 describe("#removeRootPassword", () => {
   it("removes the root password", async () => {
     const client = new UsersClient(dbusClient);
-    const result = await client.removeRootPassword("12345");
+    const result = await client.removeRootPassword();
     expect(usersProxy.RemoveRootPassword).toHaveBeenCalled();
     expect(result).toEqual(true);
   });

@@ -19,7 +19,7 @@
  * find current contact information at www.suse.com.
  */
 
-import StorageClient from "./storage";
+import { StorageClient } from "./storage";
 import { DBusClient } from "./dbus";
 
 // NOTE: should we export them?

@@ -19,7 +19,7 @@
  * find current contact information at www.suse.com.
  */
 
-import ManagerClient from "./manager";
+import { ManagerClient } from "./manager";
 import { DBusClient } from "./dbus";
 import cockpit from "../lib/cockpit";
 

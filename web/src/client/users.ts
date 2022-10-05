@@ -89,9 +89,9 @@ class UsersClient {
   /**
    * Set the root password
    *
-   * @param {String} password - plain text root password ( maybe allow client side encryption?)
+   * @param password - plain text root password ( maybe allow client side encryption?)
    */
-  async setRootPassword(password): Promise<boolean> {
+  async setRootPassword(password: string): Promise<boolean> {
     const proxy = await this.client.proxy(USERS_IFACE);
     const result = await proxy.SetRootPassword(password, false);
     return result === 0;
@@ -130,18 +130,18 @@ class UsersClient {
    *
    * @param handler - callback function
    */
-  onUsersChange(handler: ((changes: any) => void)) {
+  onUsersChange(handler: ((changes: object) => void)) {
     return this.client.onObjectChanged(USERS_PATH, USERS_IFACE, changes => {
       if (changes.RootPasswordSet) {
         return handler({ rootPasswordSet: changes.RootPasswordSet.v });
       } else if (changes.RootSSHKey) {
         return handler({ rootSSHKey: changes.RootSSHKey.v });
       } else if (changes.FirstUser) {
-        const [fullName, userName, autologin] = changes.FirstUser.v;
+        const [fullName, userName, autologin] = changes.FirstUser.v as string[];
         return handler({ firstUser: { fullName, userName, autologin } });
       }
     });
   }
 }
 
-export default UsersClient;
+export { UsersClient };

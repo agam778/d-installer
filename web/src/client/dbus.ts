@@ -21,8 +21,8 @@
 
 import cockpit from "../lib/cockpit";
 
-type removeFn = () => void;
-type ChangesFn = (changes: object, invalid?: string[]) => void;
+type RemoveFn = () => void;
+type ChangesFn = (changes: DBusChanges, invalid?: string[]) => void;
 type signalFn = (path: string, iface: string, signal: string, args: any[]) => void;
 
 type SignalMatch = {
@@ -31,6 +31,15 @@ type SignalMatch = {
   path_namespace?: string,
   member?: string,
   arg0?: string
+}
+
+type DBusValue = {
+  t: string,
+  v: DBusValue | DBusValue[] | number | string | boolean | number[] | string[] | boolean[]
+}
+
+type DBusChanges = {
+  [index: string]: DBusValue
 }
 
 class DBusClient {
@@ -62,14 +71,14 @@ class DBusClient {
    * @param handler - callback function
    * @return function to unsubscribe
    */
-  onObjectChanged(path: string, iface: string, handler: ChangesFn): removeFn {
+  onObjectChanged(path: string, iface: string, handler: ChangesFn): RemoveFn {
     const { remove } = this.client.subscribe(
       {
         path,
         interface: "org.freedesktop.DBus.Properties",
         member: "PropertiesChanged"
       },
-      (_path: string, _iface: string, _signal: string, args: [string, object, string[]]) => {
+      (_path: string, _iface: string, _signal: string, args: [string, DBusChanges, string[]]) => {
         const [source_iface, changes, invalid] = args;
         if (iface === source_iface) {
           handler(changes, invalid);
@@ -86,7 +95,7 @@ class DBusClient {
    * @param handler - callback function
    * @return function to unsubscribe
    */
-  onSignal(match: SignalMatch, handler: signalFn) {
+  onSignal(match: SignalMatch, handler: signalFn): RemoveFn {
     const { remove } = this.client.subscribe(match, handler);
     return remove;
   }
@@ -94,5 +103,9 @@ class DBusClient {
 
 export {
   DBusClient,
-  type ChangesFn
+  type ChangesFn,
+  type DBusChanges,
+  type DBusValue,
+  type SignalMatch,
+  type RemoveFn,
 };

@@ -19,7 +19,7 @@
  * find current contact information at www.suse.com.
  */
 
-import SoftwareClient from "./software";
+import { SoftwareClient } from "./software";
 import { DBusClient } from "./dbus";
 
 const SOFTWARE_IFACE = "org.opensuse.DInstaller.Software1";

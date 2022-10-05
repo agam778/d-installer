@@ -20,7 +20,7 @@
  */
 
 import cockpit from "../lib/cockpit";
-import { DBusClient } from "./dbus";
+import { DBusClient, DBusChanges, DBusValue } from "./dbus";
 import { WithStatus } from "./mixins";
 
 const STORAGE_SERVICE = "org.opensuse.DInstaller.Storage";
@@ -47,7 +47,7 @@ type StorageDevice = {
 /**
  * Storage client
  */
-class StorageClient {
+class Client {
   client: DBusClient;
 
   constructor(dbusClient?: DBusClient) {
@@ -59,7 +59,7 @@ class StorageClient {
    */
   async getStorageActions(): Promise<StorageAction[]> {
     const proxy = await this.client.proxy(STORAGE_PROPOSAL_IFACE);
-    return proxy.Actions.map((action: any) => {
+    return proxy.Actions.map((action: DBusChanges) => {
       const { Text: { v: textVar }, Subvol: { v: subvolVar }, Delete: { v: deleteVar } } = action;
       return { text: textVar, subvol: subvolVar, delete: deleteVar };
     });
@@ -95,7 +95,7 @@ class StorageClient {
     return this.client.onObjectChanged(STORAGE_PROPOSAL_PATH, STORAGE_PROPOSAL_IFACE, (changes: any) => {
       const { Actions: actions } = changes;
       if (actions !== undefined) {
-        const newActions = actions.v.map((action: any) => {
+        const newActions = actions.v.map((action: DBusChanges) => {
           const { Text: textVar, Subvol: subvolVar, Delete: deleteVar } = action;
           return { text: textVar.v, subvol: subvolVar.v, delete: deleteVar.v };
         });
@@ -110,11 +110,12 @@ class StorageClient {
    * @param handler - callback function
    */
   onStorageProposalChange(handler: ((selected: boolean) => void)) {
-    return this.client.onObjectChanged(STORAGE_PROPOSAL_PATH, STORAGE_PROPOSAL_IFACE, changes => {
-      const [selected] = (changes.CandidateDevices as any).v;
+    return this.client.onObjectChanged(STORAGE_PROPOSAL_PATH, STORAGE_PROPOSAL_IFACE, (changes: DBusChanges) => {
+      const [selected] = changes.CandidateDevices.v as boolean[];
       handler(selected);
     });
   }
 }
 
-export default WithStatus(StorageClient, STORAGE_PROPOSAL_PATH);
+const StorageClient = WithStatus(Client, STORAGE_PROPOSAL_PATH);
+export { StorageClient };
