@@ -20,11 +20,11 @@
  */
 
 import SoftwareClient from "./software";
-import cockpit from "../lib/cockpit";
+import { DBusClient } from "./dbus";
 
 const SOFTWARE_IFACE = "org.opensuse.DInstaller.Software1";
 
-const dbusClient = {};
+const dbusClient = new DBusClient("");
 const softProxy = {
   wait: jest.fn(),
   AvailableBaseProducts: [
@@ -35,7 +35,6 @@ const softProxy = {
 };
 
 beforeEach(() => {
-  cockpit.dbus = jest.fn().mockImplementation(() => dbusClient);
   dbusClient.proxy = jest.fn().mockImplementation(iface => {
     if (iface === SOFTWARE_IFACE) return softProxy;
   });

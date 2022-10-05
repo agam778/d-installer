@@ -19,8 +19,8 @@
  * find current contact information at www.suse.com.
  */
 
-import { applyMixin, withDBus, withStatus, withProgress } from "./mixins";
-import cockpit from "../lib/cockpit";
+import { WithStatus, WithProgress } from "./mixins";
+import { DBusClient } from "./dbus";
 
 const SOFTWARE_SERVICE = "org.opensuse.DInstaller.Software";
 const SOFTWARE_IFACE = "org.opensuse.DInstaller.Software1";
@@ -30,10 +30,10 @@ const SOFTWARE_PATH = "/org/opensuse/DInstaller/Software1";
  * Software client
  */
 class SoftwareClient {
-  constructor() {
-    this._client = cockpit.dbus(SOFTWARE_SERVICE, {
-      bus: "system", superuser: "try"
-    });
+  client: DBusClient;
+
+  constructor(dbusClient?: DBusClient) {
+    this.client = dbusClient || new DBusClient(SOFTWARE_SERVICE);
   }
 
   /**
@@ -42,7 +42,7 @@ class SoftwareClient {
    * @return {Promise.<Array>}
    */
   async getProducts() {
-    const proxy = await this.proxy(SOFTWARE_IFACE);
+    const proxy = await this.client.proxy(SOFTWARE_IFACE);
     return proxy.AvailableBaseProducts.map(product => {
       const [id, name, meta] = product;
       return { id, name, description: meta.description?.v };
@@ -56,7 +56,7 @@ class SoftwareClient {
    */
   async getSelectedProduct() {
     const products = await this.getProducts();
-    const proxy = await this.proxy(SOFTWARE_IFACE);
+    const proxy = await this.client.proxy(SOFTWARE_IFACE);
     if (proxy.SelectedBaseProduct === "") {
       return null;
     }
@@ -64,7 +64,7 @@ class SoftwareClient {
   }
 
   async selectProduct(id) {
-    const proxy = await this.proxy(SOFTWARE_IFACE);
+    const proxy = await this.client.proxy(SOFTWARE_IFACE);
     return proxy.SelectProduct(id);
   }
 
@@ -74,7 +74,7 @@ class SoftwareClient {
    * @param {function} handler - callback function
    */
   onProductChange(handler) {
-    return this.onObjectChanged(SOFTWARE_PATH, SOFTWARE_IFACE, changes => {
+    return this.client.onObjectChanged(SOFTWARE_PATH, SOFTWARE_IFACE, changes => {
       if ("SelectedBaseProduct" in changes) {
         const selected = changes.SelectedBaseProduct.v;
         handler(selected);
@@ -83,7 +83,4 @@ class SoftwareClient {
   }
 }
 
-applyMixin(
-  SoftwareClient, withDBus, withStatus(SOFTWARE_PATH), withProgress(SOFTWARE_PATH)
-);
-export default SoftwareClient;
+export default WithProgress(WithStatus(SoftwareClient, SOFTWARE_PATH), SOFTWARE_PATH);
