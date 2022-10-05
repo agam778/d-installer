@@ -19,10 +19,11 @@
  * find current contact information at www.suse.com.
  */
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { List, ListItem, Stack, StackItem } from "@patternfly/react-core";
 import { useInstallerClient } from "./context/installer";
 import { useCancellablePromise } from "./utils";
+import { NetworkManager } from "./client/network_manager";
 
 const ETHERNET = 1;
 const WIRELESS = 2;
@@ -80,60 +81,39 @@ const WiredConnectionStatus = ({ connections }) => {
   return `Wired connected - ${connections.flatMap(c => c.addresses).join(", ")}`;
 };
 
-const WiFiConnectionStatus = ({ connections }) => {
-  const state = connections.map(c => c.state).join(", ");
+const WiFiConnectionStatus = ({ connections, onClick }) => {
+  const conns = connections.filter(c => c.state === 2);
 
-  if (connections.length === 0) {
+  if (conns.length === 0) {
     return (
       <>
-        ({state}) Wifi <a href="#">not connected</a>
+        Wifi{" "}
+        <a href="#" onClick={onClick}>
+          not connected
+        </a>
       </>
     );
   }
 
   // TODO: show the SSID
-  return (
-    <>
-      ({state}) WiFi connected {connections.flatMap(c => c.addresses).join(", ")};
-    </>
-  );
+  return <>WiFi connected {conns.flatMap(c => c.addresses).join(", ")}</>;
 };
 
 export default function Network() {
   const client = useInstallerClient();
-  const { cancellablePromise } = useCancellablePromise();
-  const [connections, setConnections] = useState(undefined);
+  const [connections, setConnections] = useState();
 
   useEffect(() => {
-    // TODO: FIXME: Something like ....
-    //   client.network.connections(setConnection);
-    //   return client.network.onConnectionsChange(() => {
-    //     // change the state acccordingly
-    //   });
+    const manager = new NetworkManager(client.network);
+    manager.onConnectionsChange(setConnections);
+  }, [client.network]);
 
-    const loadConnections = async () => {
-      console.log("reloading connections");
-      cancellablePromise(client.network.activeConnections())
-        .then(setConnections)
-        .catch(e => console.log("Something went wrong", e));
-    };
-
-    loadConnections();
-    // client.network.activeConnections().then(setConnections);
-    // return client.network.onStateChange(async changes => {
-    return client.network.onStateChange(changes => {
-      console.log("An active connection has changed", changes);
-      loadConnections();
-    });
-  }, [client.network, cancellablePromise]);
-
-  console.log("connections", connections);
   if (!connections) {
     return "Retrieving network information...";
   }
 
-  const activeWiredConnections = connections.filter(c => c.type === CONNECTION_TYPES.ETHERNET);
-  const activeWifiConnections = connections.filter(c => c.type === CONNECTION_TYPES.WIFI);
+  const activeWiredConnections = connections.filter(c => c.isWired); // c.type === CONNECTION_TYPES.ETHERNET);
+  const activeWifiConnections = connections.filter(c => c.isWifi); // c.type === CONNECTION_TYPES.WIFI);
 
   return (
     <Stack className="overview-network">

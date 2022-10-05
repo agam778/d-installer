@@ -254,8 +254,15 @@ const NM_ACTIVE_CONNECTION_IFACE = "org.freedesktop.NetworkManager.Connection.Ac
    */
   onActiveConnectionChange(path, handler) {
     return this.onObjectChanged(path, NM_ACTIVE_CONNECTION_IFACE, changes => {
-      console.log("Active connection changed", changes);
       handler(changes);
+    });
+  }
+
+  onConnectionStateChange(connectionPath, handler) {
+    return this.onObjectChanged(connectionPath, NM_ACTIVE_CONNECTION_IFACE, changes => {
+      if ("State" in changes) {
+        handler(connectionPath, changes.State.v);
+      }
     });
   }
   /*
