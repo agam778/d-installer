@@ -19,34 +19,45 @@
  * find current contact information at www.suse.com.
  */
 
-import { applyMixin, withDBus } from "./mixins";
+import { DBusClient } from "./dbus";
 
 const NM_IFACE = "org.freedesktop.NetworkManager";
+const SERVICE_NAME = "org.freedesktop.NetworkManager";
+
+/**
+ * @typedef {Object} IPConfig
+ * @property {IPAddress[]} addresses
+ * @property {string} hostname
+ */
+type IPConfig = {
+  addresses: IPAddress[],
+  hostname: string
+}
+
+/**
+ * @typedef {Object} IPAddress
+ * @property {string} address - like "129.168.1.2"
+ * @property {string} prefix - like "16"
+ */
+type IPAddress = {
+  address: string,
+  prefix: string
+}
 
 /**
  * Network client
  */
 class NetworkClient {
-  constructor(dbusClient) {
-    this._client = dbusClient;
+  client: DBusClient;
+
+  constructor() {
+    this.client = new DBusClient(SERVICE_NAME);
   }
 
   /**
-   * @typedef {Object} IPAddress
-   * @property {string} address - like "129.168.1.2"
-   * @property {string} prefix - like "16"
-   */
-  /**
-   * @typedef {Object} IPConfig
-   * @property {IPAddress[]} addresses
-   * @property {string} hostname
-   */
-
-  /**
    * Returns IP config overview - addresses and hostname
-   * @return {Promise.<IPConfig>}
    */
-  async config() {
+  async config(): Promise<IPConfig> {
     const data = await this.#addresses();
     const addresses = data.map(a => {
       return {
@@ -65,11 +76,9 @@ class NetworkClient {
    * Returns the computer's hostname
    *
    * https://developer-old.gnome.org/NetworkManager/stable/gdbus-org.freedesktop.NetworkManager.Settings.html
-   *
-   * @return {Promise.<String>}
    */
-  async hostname() {
-    const proxy = await this.proxy(NM_IFACE + ".Settings");
+  async hostname(): Promise<string> {
+    const proxy = await this.client.proxy(NM_IFACE + ".Settings");
 
     return proxy.Hostname;
   }
@@ -80,11 +89,9 @@ class NetworkClient {
    * Private method.
    * See NM API documentation for details.
    * https://developer-old.gnome.org/NetworkManager/stable/gdbus-org.freedesktop.NetworkManager.html
-   *
-   * @return {Promise.<Array>}
    */
-  async #connections() {
-    const proxy = await this.proxy(NM_IFACE);
+  async #connections(): Promise<any[]> {
+    const proxy = await this.client.proxy(NM_IFACE);
 
     return proxy.ActiveConnections;
   }
@@ -99,9 +106,9 @@ class NetworkClient {
    *
    * @return {Promise.<Map>}
    */
-  async #address(connection) {
-    const configPath = await this.proxy(NM_IFACE + ".Connection.Active", connection);
-    const ipConfigs = await this.proxy(NM_IFACE + ".IP4Config", configPath.Ip4Config);
+  async #address(connection): Promise<any[]> {
+    const configPath = await this.client.proxy(NM_IFACE + ".Connection.Active", connection);
+    const ipConfigs = await this.client.proxy(NM_IFACE + ".IP4Config", configPath.Ip4Config);
 
     return ipConfigs.AddressData;
   }
@@ -113,7 +120,7 @@ class NetworkClient {
    *
    * @return {Promise.<Array>}
    */
-  async #addresses() {
+  async #addresses(): Promise<any[]> {
     const conns = await this.#connections();
 
     let result = [];
@@ -127,5 +134,4 @@ class NetworkClient {
   }
 }
 
-applyMixin(NetworkClient, withDBus);
 export default NetworkClient;
