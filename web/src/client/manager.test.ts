@@ -20,6 +20,7 @@
  */
 
 import ManagerClient from "./manager";
+import { DBusClient } from "./dbus";
 import cockpit from "../lib/cockpit";
 
 jest.mock("../lib/cockpit");
@@ -28,7 +29,7 @@ const MANAGER_IFACE = "org.opensuse.DInstaller.Manager1";
 const SERVICE_IFACE = "org.opensuse.DInstaller.ServiceStatus1";
 const PROGRESS_IFACE = "org.opensuse.DInstaller.Progress1";
 
-const dbusClient = {};
+const dbusClient = new DBusClient("");
 const managerProxy = {
   wait: jest.fn(),
   Commit: jest.fn(),

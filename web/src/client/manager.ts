@@ -19,9 +19,11 @@
  * find current contact information at www.suse.com.
  */
 
-import { applyMixin, withDBus, withStatus, withProgress } from "./mixins";
 import cockpit from "../lib/cockpit";
+import { WithStatus, WithProgress } from "./mixins";
+import { DBusClient } from "./dbus";
 
+const MANAGER_SERVICE = "org.opensuse.DInstaller";
 const MANAGER_IFACE = "org.opensuse.DInstaller.Manager1";
 const MANAGER_PATH = "/org/opensuse/DInstaller/Manager1";
 
@@ -29,8 +31,10 @@ const MANAGER_PATH = "/org/opensuse/DInstaller/Manager1";
  * Manager client
  */
 class ManagerClient {
-  constructor(dbusClient) {
-    this._client = dbusClient;
+  client: DBusClient;
+
+  constructor(dbusClient?: DBusClient) {
+    this.client = dbusClient || new DBusClient(MANAGER_SERVICE);
   }
 
   /**
@@ -38,11 +42,9 @@ class ManagerClient {
    *
    * The progress of the probing process can be tracked through installer
    * signals (see {onSignal}).
-   *
-   * @return {Promise}
    */
-  async startProbing() {
-    const proxy = await this.proxy(MANAGER_IFACE);
+  async startProbing(): Promise<void> {
+    const proxy = await this.client.proxy(MANAGER_IFACE);
     return proxy.Probe();
   }
 
@@ -54,46 +56,39 @@ class ManagerClient {
    *
    * @return {Promise}
    */
-  async startInstallation() {
-    const proxy = await this.proxy(MANAGER_IFACE);
+  async startInstallation(): Promise<void> {
+    const proxy = await this.client.proxy(MANAGER_IFACE);
     return proxy.Commit();
   }
 
   /**
    * Return the installer status
-   *
-   * @return {Promise.<number>}
    */
-  async getPhase() {
-    const proxy = await this.proxy(MANAGER_IFACE);
+  async getPhase(): Promise<number> {
+    const proxy = await this.client.proxy(MANAGER_IFACE);
     return proxy.CurrentInstallationPhase;
   }
 
   /**
    * Register a callback to run when the "CurrentInstallationPhase" changes
    *
-   * @param {function} handler - callback function
-   * @return {function} function to disable callback
+   * @param handler - callback function
+   * @return function to disable callback
    */
-  onPhaseChange(handler) {
-    return this.onObjectChanged(MANAGER_PATH, MANAGER_IFACE, (changes) => {
+  onPhaseChange(handler: (phase: string) => void): () => void {
+    return this.client.onObjectChanged(MANAGER_PATH, MANAGER_IFACE, (changes: object) => {
       if ("CurrentInstallationPhase" in changes) {
-        handler(changes.CurrentInstallationPhase.v);
+        handler((changes as any).CurrentInstallationPhase.v);
       }
     });
   }
 
   /**
    * Returns whether calling the system reboot suceeded or not.
-   *
-   * @return {Promise.<boolean>}
    */
-  rebootSystem() {
+  rebootSystem(): Promise<boolean> {
     return cockpit.spawn(["/usr/sbin/shutdown", "-r", "now"]);
   }
 }
 
-applyMixin(
-  ManagerClient, withDBus, withStatus(MANAGER_PATH), withProgress(MANAGER_PATH)
-);
-export default ManagerClient;
+export default WithProgress(WithStatus(ManagerClient, MANAGER_PATH), MANAGER_PATH);
