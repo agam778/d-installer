@@ -19,9 +19,7 @@
  * find current contact information at www.suse.com.
  */
 
-import { applyMixin, withDBus } from "./mixins";
-import cockpit from "../lib/cockpit";
-
+import { DBusClient } from "./dbus";
 const DBUS_SERVICE = "org.freedesktop.DBus";
 const MATCHER = { interface: DBUS_SERVICE, member: "NameOwnerChanged" };
 
@@ -29,16 +27,15 @@ const MATCHER = { interface: DBUS_SERVICE, member: "NameOwnerChanged" };
  * Monitor a D-Bus service
  */
 class Monitor {
+  watchedService: string;
+  client: DBusClient;
+
   /**
-   * @param {object} dbusClient - from cockpit.dbus
-   * @param {string} serviceName - service to monitor
+   * @param {string} watchedService - service to monitor
    */
-  constructor(serviceName) {
-    this.serviceName = serviceName;
-    this._client = cockpit.dbus("org.freedesktop.DBus", {
-      bus: "system",
-      superuser: "try"
-    });
+  constructor(watchedService: string) {
+    this.client = new DBusClient(DBUS_SERVICE);
+    this.watchedService = watchedService;
   }
 
   /**
@@ -47,10 +44,10 @@ class Monitor {
    * @param {function} handler - function to execute. It receives true if the service was connected
    *  and false if the service was disconnected.
    */
-  onConnectionChange(handler) {
-    return this.onSignal(MATCHER, (_path, _interface, _signal, args) => {
+  onConnectionChange(handler: (connected: boolean) => void) {
+    return this.client.onSignal(MATCHER, (_path, _interface, _signal, args) => {
       const [service, , newOwner] = args;
-      if (service === this.serviceName) {
+      if (service === this.watchedService) {
         const connected = newOwner.length !== 0;
         handler(connected);
       }
@@ -58,5 +55,4 @@ class Monitor {
   }
 }
 
-applyMixin(Monitor, withDBus);
 export default Monitor;
