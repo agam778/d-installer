@@ -20,11 +20,11 @@
  */
 
 import UsersClient from "./users";
-import cockpit from "../lib/cockpit";
+import { DBusClient } from "./dbus";
 
 const USERS_IFACE = "org.opensuse.DInstaller.Users1";
 
-const dbusClient = {};
+const dbusClient = new DBusClient("");
 
 const usersProxy = {
   wait: jest.fn(),
@@ -39,7 +39,6 @@ const usersProxy = {
 };
 
 beforeEach(() => {
-  cockpit.dbus = jest.fn().mockImplementation(() => dbusClient);
   dbusClient.proxy = jest.fn().mockImplementation(iface => {
     if (iface === USERS_IFACE) return usersProxy;
   });

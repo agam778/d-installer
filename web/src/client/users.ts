@@ -20,52 +20,53 @@ const USERS_IFACE = "org.opensuse.DInstaller.Users1";
  * find current contact information at www.suse.com.
  */
 
-import { applyMixin, withDBus } from "./mixins";
-import cockpit from "../lib/cockpit";
+import { DBusClient } from "./dbus";
 
 const USERS_SERVICE = "org.opensuse.DInstaller.Users";
 const USERS_IFACE = "org.opensuse.DInstaller.Users1";
 const USERS_PATH = "/org/opensuse/DInstaller/Users1";
 
+type User = {
+  fullName: string,
+  userName: string,
+  password?: string,
+  autologin: boolean
+}
+
 /**
  * Users client
  */
 class UsersClient {
-  constructor() {
-    this._client = cockpit.dbus(USERS_SERVICE, {
-      bus: "system", superuser: "try"
-    });
+  client: DBusClient;
+
+  constructor(dbusClient?: DBusClient) {
+    this.client = dbusClient || new DBusClient(USERS_SERVICE);
   }
 
   /**
    * Return the first user structure
-   *
-   * @return {Promise.<Object>}
    */
-  async getUser() {
-    const proxy = await this.proxy(USERS_IFACE);
+  async getUser(): Promise<User> {
+    const proxy = await this.client.proxy(USERS_IFACE);
     const [fullName, userName, autologin] = proxy.FirstUser;
     return { fullName, userName, autologin };
   }
 
   /**
    * Return true if root password is set
-   *
-   * @return {Promise.<Boolean>}
    */
-  async isRootPasswordSet() {
-    const proxy = await this.proxy(USERS_IFACE);
+  async isRootPasswordSet(): Promise<boolean> {
+    const proxy = await this.client.proxy(USERS_IFACE);
     return proxy.RootPasswordSet;
   }
 
   /**
    * Set the languages to install
    *
-   * @param {object} user - object with full name, user name, password and boolean for autologin
-   * @return {Promise.<String|undefined>}
+   * @param user - object with full name, user name, password and boolean for autologin
    */
-  async setUser(user) {
-    const proxy = await this.proxy(USERS_IFACE);
+  async setUser(user: User): Promise<boolean> {
+    const proxy = await this.client.proxy(USERS_IFACE);
     const result = await proxy.SetFirstUser(
       user.fullName,
       user.userName,
@@ -78,11 +79,9 @@ class UsersClient {
 
   /**
    * Remove the first user
-   *
-   * @return {Promise.<boolean>}
    */
-  async removeUser() {
-    const proxy = await this.proxy(USERS_IFACE);
+  async removeUser(): Promise<boolean> {
+    const proxy = await this.client.proxy(USERS_IFACE);
     const result = await proxy.RemoveFirstUser();
     return result === 0;
   }
@@ -91,43 +90,37 @@ class UsersClient {
    * Set the root password
    *
    * @param {String} password - plain text root password ( maybe allow client side encryption?)
-   * @return {Promise.<Number>}
    */
-  async setRootPassword(password) {
-    const proxy = await this.proxy(USERS_IFACE);
+  async setRootPassword(password): Promise<boolean> {
+    const proxy = await this.client.proxy(USERS_IFACE);
     const result = await proxy.SetRootPassword(password, false);
     return result === 0;
   }
 
   /**
    * Clear the root password
-   *
-   * @return {Promise.<Number>}
    */
-  async removeRootPassword() {
-    const proxy = await this.proxy(USERS_IFACE);
+  async removeRootPassword(): Promise<boolean> {
+    const proxy = await this.client.proxy(USERS_IFACE);
     const result = await proxy.RemoveRootPassword();
     return result === 0;
   }
 
   /**
    * Return string with ssh key or empty string
-   *
-   * @return {Promise.<String>}
    */
-  async getRootSSHKey() {
-    const proxy = await this.proxy(USERS_IFACE);
+  async getRootSSHKey(): Promise<string> {
+    const proxy = await this.client.proxy(USERS_IFACE);
     return proxy.RootSSHKey;
   }
 
   /**
    * Set the root SSH Key
    *
-   * @param {String} key - plain text root ssh key. Empty string means disabled
-   * @return {Promise.<Number>}
+   * @param key - plain text root ssh key. Empty string means disabled
    */
-  async setRootSSHKey(key) {
-    const proxy = await this.proxy(USERS_IFACE);
+  async setRootSSHKey(key: string): Promise<boolean> {
+    const proxy = await this.client.proxy(USERS_IFACE);
     const result = await proxy.SetRootSSHKey(key);
     return result === 0;
   }
@@ -135,10 +128,10 @@ class UsersClient {
   /**
    * Register a callback to run when properties in the Users object change
    *
-   * @param {function} handler - callback function
+   * @param handler - callback function
    */
-  onUsersChange(handler) {
-    return this.onObjectChanged(USERS_PATH, USERS_IFACE, changes => {
+  onUsersChange(handler: ((changes: any) => void)) {
+    return this.client.onObjectChanged(USERS_PATH, USERS_IFACE, changes => {
       if (changes.RootPasswordSet) {
         return handler({ rootPasswordSet: changes.RootPasswordSet.v });
       } else if (changes.RootSSHKey) {
@@ -151,5 +144,4 @@ class UsersClient {
   }
 }
 
-applyMixin(UsersClient, withDBus);
 export default UsersClient;
