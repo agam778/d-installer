@@ -22,6 +22,8 @@
 import { DBusClient } from "./dbus";
 
 const NM_IFACE = "org.freedesktop.NetworkManager";
+const NM_ACTIVE_CONNECTION_IFACE = "org.freedesktop.NetworkManager.Connection.Active";
+const NM_IP4CONFIG_IFACE = "org.freedesktop.NetworkManager.IP4Config";
 const SERVICE_NAME = "org.freedesktop.NetworkManager";
 
 /**
@@ -44,11 +46,21 @@ type IPAddress = {
   prefix: string
 }
 
+type Connection = {
+  path: string,
+  type: string,
+  state: number,
+  addresses: string[]
+}
+
+type ConnectionFn = (conn: Connection) => void
+
 /**
  * Network client
  */
 class NetworkClient {
   client: DBusClient;
+  handlers: ConnectionFn[] = [];
 
   constructor() {
     this.client = new DBusClient(SERVICE_NAME);
@@ -70,6 +82,57 @@ class NetworkClient {
       addresses,
       hostname: await this.hostname()
     };
+  }
+
+    // TODO: document
+  formattedAddress(ip: any): string {
+    return `${ip.address.v}/${ip.prefix.v}`;
+  }
+
+  onConnectionChange(handler: ConnectionFn) {
+    this.handlers.push(handler);
+  }
+
+  listen() {
+    const signal = {
+      interface: "org.freedesktop.DBus.Properties",
+      path: "/org/freedesktop/NetworkManager",
+      member: "PropertiesChanged",
+    }
+
+    return this.client.onSignal(signal, (...args) => {
+      console.log("StateChanged!", args)
+      this.handlers.forEach(handler => handler(...args));
+    });
+  }
+
+  async connection(path: string): Promise<Connection> {
+    const connection = await this.client.proxy(NM_ACTIVE_CONNECTION_IFACE, path);
+    let addresses: string[] = [];
+
+    if (connection.State === 2) {
+      const ip4Config = await this.client.proxy(NM_IP4CONFIG_IFACE, connection.Ip4Config);
+      addresses = ip4Config.AddressData.map(this.formattedAddress);
+    }
+
+    return {
+      path,
+      addresses,
+      type: connection.Type,
+      state: connection.State
+    };
+  }
+
+   async activeConnections(): Promise<Connection[]> {
+    const proxy = await this.client.proxy(NM_IFACE);
+
+    let connections: Connection[] = [];
+
+    for (const path of proxy.ActiveConnections) {
+      connections = [...connections, await this.connection(path)];
+    }
+
+    return connections;
   }
 
   /**

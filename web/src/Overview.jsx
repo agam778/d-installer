@@ -31,6 +31,7 @@ import Category from "./Category";
 import LanguageSelector from "./LanguageSelector";
 import Storage from "./Storage";
 import Users from "./Users";
+import Network from "./Network";
 import Popup from "./Popup";
 
 import {
@@ -105,6 +106,9 @@ function Overview() {
   const categories = [
     <Category key="language" title="Language" icon={LanguagesSelectionIcon}>
       <LanguageSelector />
+    </Category>,
+    <Category key="network" title="Networking" icon={() => null}>
+      <Network />
     </Category>,
     <Category key="storage" title="Storage" icon={HardDriveIcon}>
       <Storage />
