@@ -47,8 +47,8 @@ export class NetworkManager {
     this.triggerSubscriptions();
   }
 
-  updateConnection(id, state) {
-    this.connections[id].state = state;
+  updateConnection(path, state) {
+    this.connections[path].state = state;
     this.triggerSubscriptions();
   }
 
@@ -62,16 +62,17 @@ export class NetworkManager {
 
   addConnection(data) {
     const connection = {
-      id: data.path,
+      id: data.id,
+      path: data.path,
       type: data.type,
       state: data.state,
       isWired: data.type === CONNECTION_TYPES.ETHERNET,
       isWifi: data.type === CONNECTION_TYPES.WIRELESS
     };
 
-    this.client.onConnectionStateChange(connection.id, (id, state) =>
-      this.updateConnection(id, state)
+    this.client.onConnectionStateChange(connection.path, (path, state) =>
+      this.updateConnection(path, state)
     );
-    this.connections[connection.id] = connection;
+    this.connections[connection.path] = connection;
   }
 }

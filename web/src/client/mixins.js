@@ -74,7 +74,7 @@ const withDBus = {
 
 const STATUS_IFACE = "org.opensuse.DInstaller.ServiceStatus1";
 
-const withStatus = (object_path) => {
+const withStatus = object_path => {
   return {
     /**
      * Returns the service status
@@ -93,7 +93,7 @@ const withStatus = (object_path) => {
      * @return {function} function to disable the callback
      */
     onStatusChange(handler) {
-      return this.onObjectChanged(object_path, STATUS_IFACE, (changes) => {
+      return this.onObjectChanged(object_path, STATUS_IFACE, changes => {
         if ("Current" in changes) {
           handler(changes.Current.v);
         }
@@ -104,7 +104,7 @@ const withStatus = (object_path) => {
 
 const PROGRESS_IFACE = "org.opensuse.DInstaller.Progress1";
 
-const withProgress = (object_path) => {
+const withProgress = object_path => {
   return {
     /**
      * Returns the service progress
@@ -115,9 +115,9 @@ const withProgress = (object_path) => {
     async getProgress() {
       const proxy = await this.proxy(PROGRESS_IFACE, object_path);
       return {
-        total:    proxy.TotalSteps,
-        current:  proxy.CurrentStep[0],
-        message:  proxy.CurrentStep[1],
+        total: proxy.TotalSteps,
+        current: proxy.CurrentStep[0],
+        message: proxy.CurrentStep[1],
         finished: proxy.Finished
       };
     },
@@ -129,7 +129,7 @@ const withProgress = (object_path) => {
      * @return {function} function to disable the callback
      */
     onProgressChange(handler) {
-      return this.onObjectChanged(object_path, PROGRESS_IFACE, (changes) => {
+      return this.onObjectChanged(object_path, PROGRESS_IFACE, changes => {
         const { TotalSteps, CurrentStep, Finished } = changes;
         if (TotalSteps === undefined && CurrentStep === undefined && Finished === undefined) {
           return;

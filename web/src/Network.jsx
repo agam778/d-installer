@@ -74,11 +74,13 @@ const NetworkDevice = ({ Interface: iface, dbusPath: deviceDbusPath, State, ...p
 };
 
 const WiredConnectionStatus = ({ connections }) => {
-  if (connections.length === 0) {
+  const conns = connections.filter(c => c.state === 2);
+
+  if (conns.length === 0) {
     return "Wired not connnected";
   }
 
-  return `Wired connected - ${connections.flatMap(c => c.addresses).join(", ")}`;
+  return `Wired connected - ${conns.flatMap(c => c.addresses).join(", ")} ${conns.map(c => c.id)}`;
 };
 
 const WiFiConnectionStatus = ({ connections, onClick }) => {
@@ -96,7 +98,11 @@ const WiFiConnectionStatus = ({ connections, onClick }) => {
   }
 
   // TODO: show the SSID
-  return <>WiFi connected {conns.flatMap(c => c.addresses).join(", ")}</>;
+  return (
+    <>
+      WiFi connected {conns.flatMap(c => c.addresses).join(", ")} {conns.map(c => c.id)}
+    </>
+  );
 };
 
 export default function Network() {

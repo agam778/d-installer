@@ -77,6 +77,10 @@ const NM_ACTIVE_CONNECTION_IFACE = "org.freedesktop.NetworkManager.Connection.Ac
     return proxy.Hostname;
   }
 
+  onConnectionChange(handler) {
+    this.subscribers.push(handler);
+  }
+
   // TODO: document
   formattedAddress(ip) {
     return `${ip.address.v}/${ip.prefix.v}`;
@@ -214,6 +218,7 @@ const NM_ACTIVE_CONNECTION_IFACE = "org.freedesktop.NetworkManager.Connection.Ac
     return {
       path,
       addresses,
+      id: connection.Id,
       type: connection.Type,
       state: connection.State
     };
