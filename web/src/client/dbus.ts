@@ -21,10 +21,40 @@
 
 import cockpit from "../lib/cockpit";
 
+/**
+ * Typical function to remove a subscriber.
+ */
 type RemoveFn = () => void;
+
+/**
+ * Function to handle D-Bus changes.
+ *
+ * @param changes - Changes from D-Bus. It is usually an object using the properties name as keys
+ * and the changes as values.
+ * @param invalid - List of properties that are not valid anymore.
+ */
 type ChangesFn = (changes: DBusChanges, invalid?: string[]) => void;
+
+/**
+  * Function to handle D-Bus changes.
+  *
+  * @param path - D-Bus path of the object that emitted the signal
+  * @param iface - D-Bus interface
+  * @param signal - Signal name
+  * @param args - Signal arguments
+  */
 type signalFn = (path: string, iface: string, signal: string, args: any[]) => void;
 
+/**
+  * Object to match a concrete signal
+  *
+  * @param interface - D-Bus interface name
+  * @param path - D-Bus object path
+  * @param path_namespace - Prefix of the D-Bus object path. For instance, /foo/bar if you want
+  * to catch signals from /foo/bar/*
+  * @param member - signal name
+  * @param arg0 - First element of a D-Bus message
+  */
 type SignalMatch = {
   interface?: string,
   path?: string,
@@ -33,15 +63,28 @@ type SignalMatch = {
   arg0?: string
 }
 
+/**
+ * Object representing a value from D-Bus.
+ */
 type DBusValue = {
+  /** D-Bus type signature */
   t: string,
+  /** Value */
   v: DBusValue | DBusValue[] | number | string | boolean | number[] | string[] | boolean[]
 }
 
+/**
+ * OBject representing a set of changes from D-Bus.
+ */
 type DBusChanges = {
   [index: string]: DBusValue
 }
 
+/**
+  * Generic D-Bus client
+  *
+  * This class provides a higher level API on top of cockpit.dbus.
+  */
 class DBusClient {
   readonly client: any;
 

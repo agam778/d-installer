@@ -40,8 +40,7 @@ class Client {
   /**
    * Run probing process
    *
-   * The progress of the probing process can be tracked through installer
-   * signals (see {onSignal}).
+   * The progress of the probing process can be tracked through installer signals.
    */
   async startProbing(): Promise<void> {
     const proxy = await this.client.proxy(MANAGER_IFACE);
@@ -51,10 +50,7 @@ class Client {
   /**
    * Start the installation process
    *
-   * The progress of the installation process can be tracked through installer
-   * signals (see {onSignal}).
-   *
-   * @return {Promise}
+   * The progress of the installation process can be tracked through installer signals.
    */
   async startInstallation(): Promise<void> {
     const proxy = await this.client.proxy(MANAGER_IFACE);

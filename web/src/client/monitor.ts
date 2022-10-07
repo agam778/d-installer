@@ -24,14 +24,14 @@ const DBUS_SERVICE = "org.freedesktop.DBus";
 const MATCHER = { interface: DBUS_SERVICE, member: "NameOwnerChanged" };
 
 /**
- * Monitor a D-Bus service
+ * This class monitors a D-Bus service and runs a handler when its status change.
  */
 class Monitor {
   watchedService: string;
   client: DBusClient;
 
   /**
-   * @param {string} watchedService - service to monitor
+   * @param watchedService - name of the service to monitor
    */
   constructor(watchedService: string) {
     this.client = new DBusClient(DBUS_SERVICE);
@@ -41,7 +41,7 @@ class Monitor {
   /**
    * Registers a callback to be executed when the D-Bus service connection changes
    *
-   * @param {function} handler - function to execute. It receives true if the service was connected
+   * @param handler - function to execute. It receives true if the service was connected
    *  and false if the service was disconnected.
    */
   onConnectionChange(handler: (connected: boolean) => void): RemoveFn {
