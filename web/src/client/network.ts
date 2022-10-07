@@ -47,20 +47,34 @@ type IPAddress = {
 }
 
 type Connection = {
+  id: string,
   path: string,
   type: string,
   state: number,
-  addresses: string[]
+  addresses: IPAddress[]
 }
 
-type ConnectionFn = (conn: Connection) => void
+type ConnectionFn = (conns: Connection[]) => void
+type ConnectionPathsFn = (conns: string[]) => void
+
+type Handlers = {
+  connectionAdded: ConnectionFn[],
+  connectionRemoved: ConnectionFn[],
+  connectionUpdated: ConnectionFn[]
+}
 
 /**
  * Network client
  */
 class NetworkClient {
   client: DBusClient;
-  handlers: ConnectionFn[] = [];
+  subscribed: boolean = false;
+  connectionsPaths: string[] = [];
+  handlers: Handlers = {
+    connectionAdded: [],
+    connectionRemoved: [],
+    connectionUpdated: [],
+  }
 
   constructor() {
     this.client = new DBusClient(SERVICE_NAME);
@@ -70,40 +84,58 @@ class NetworkClient {
    * Returns IP config overview - addresses and hostname
    */
   async config(): Promise<IPConfig> {
-    const data = await this.#addresses();
-    const addresses = data.map(a => {
-      return {
-        address: a.address.v,
-        prefix: a.prefix.v
-      };
-    });
-
     return {
-      addresses,
+      addresses: await this.addresses(),
       hostname: await this.hostname()
     };
   }
 
-    // TODO: document
-  formattedAddress(ip: any): string {
-    return `${ip.address.v}/${ip.prefix.v}`;
-  }
-
-  onConnectionChange(handler: ConnectionFn) {
-    this.handlers.push(handler);
-  }
-
-  listen() {
-    const signal = {
-      interface: "org.freedesktop.DBus.Properties",
-      path: "/org/freedesktop/NetworkManager",
-      member: "PropertiesChanged",
+  listen(event: "connectionAdded" | "connectionRemoved" | "connectionUpdated", handler) {
+    if (!this.subscribed) {
+      // FIXME: when/where should we unsubscribe?
+      this.subscribe();
     }
 
-    return this.client.onSignal(signal, (...args) => {
-      console.log("StateChanged!", args)
-      this.handlers.forEach(handler => handler(...args));
+    this.handlers[event].push(handler);
+    return () => { this.handlers[event].filter(h => h !== handler) }
+  }
+
+  async subscribe() {
+    this.susbcribed = true;
+    this.connectionsPaths = await this.activeConnectionsPaths(); 
+
+    this.client.onSignal({ interface: "org.freedesktop.NetworkManager.Connection.Active", member: "StateChanged" }, (path, iface, signal, args) => {
+      this.notifyConnectionUpdated(path);
     });
+
+    return this.client.onObjectChanged("/org/freedesktop/NetworkManager", "org.freedesktop.NetworkManager", (changes: DBusChanges, invalid?: string[]) => {
+      if ("ActiveConnections" in changes) {
+        const oldActiveConnections = this.connectionsPaths;
+        this.connectionsPaths = changes.ActiveConnections.v;
+        
+        const addedConnections = this.connectionsPaths.filter(c => !oldActiveConnections.includes(c));
+        const removedConnections = oldActiveConnections.filter(c => !this.connectionsPaths.includes(c));
+        if (addedConnections.length) this.notifyAddedConnections(addedConnections);
+        if (removedConnections.length) this.notifyRemovedConnections(removedConnections);
+      }
+    })
+  }
+
+  private async notifyConnectionUpdated(path: string): Connection {
+    const connection = await this.connection(path);
+    this.handlers.connectionUpdated.forEach(handler => handler(connection));
+  }
+
+  private notifyAddedConnections(connections: string[]) {
+    // FIXME: optimize this
+    const promises = connections.map(path => this.connection(path));
+    Promise.all(promises).then(conns => {
+      this.handlers.connectionAdded.forEach(handler => handler(conns))
+    });
+  }
+
+  private notifyRemovedConnections(connections: string[]) {
+    this.handlers.connectionRemoved.forEach(handler => handler(connections));
   }
 
   async connection(path: string): Promise<Connection> {
@@ -112,10 +144,11 @@ class NetworkClient {
 
     if (connection.State === 2) {
       const ip4Config = await this.client.proxy(NM_IP4CONFIG_IFACE, connection.Ip4Config);
-      addresses = ip4Config.AddressData.map(this.formattedAddress);
+      addresses = ip4Config.AddressData.map(this.connectionIPAddress);
     }
 
     return {
+      id: connection.Id,
       path,
       addresses,
       type: connection.Type,
@@ -123,12 +156,11 @@ class NetworkClient {
     };
   }
 
-   async activeConnections(): Promise<Connection[]> {
-    const proxy = await this.client.proxy(NM_IFACE);
+  async activeConnections(): Promise<Connection[]> {
+    let connections = [];
+    const paths = await this.activeConnectionsPaths();
 
-    let connections: Connection[] = [];
-
-    for (const path of proxy.ActiveConnections) {
+    for (const path of paths) {
       connections = [...connections, await this.connection(path)];
     }
 
@@ -153,7 +185,7 @@ class NetworkClient {
    * See NM API documentation for details.
    * https://developer-old.gnome.org/NetworkManager/stable/gdbus-org.freedesktop.NetworkManager.html
    */
-  async #connections(): Promise<any[]> {
+  private async activeConnectionsPaths(): Promise<string[]> {
     const proxy = await this.client.proxy(NM_IFACE);
 
     return proxy.ActiveConnections;
@@ -169,11 +201,9 @@ class NetworkClient {
    *
    * @return {Promise.<Map>}
    */
-  async #address(connection): Promise<any[]> {
-    const configPath = await this.client.proxy(NM_IFACE + ".Connection.Active", connection);
-    const ipConfigs = await this.client.proxy(NM_IFACE + ".IP4Config", configPath.Ip4Config);
 
-    return ipConfigs.AddressData;
+  private connectionIPAddress(data: any): IPAddress {
+    return { address: data.address.v, prefix: data.prefix.v }
   }
 
   /*
@@ -183,17 +213,9 @@ class NetworkClient {
    *
    * @return {Promise.<Array>}
    */
-  async #addresses(): Promise<any[]> {
-    const conns = await this.#connections();
-
-    let result = [];
-
-    for (const i in conns) {
-      const addr = await this.#address(conns[i]);
-      result = [...result, ...addr];
-    }
-
-    return result;
+  private async addresses(): IPAddress[] {
+    const conns = await this.activeConnections();
+    return conns.flatMap(c => c.addresses)
   }
 }
 

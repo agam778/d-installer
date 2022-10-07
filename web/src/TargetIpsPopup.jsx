@@ -24,28 +24,44 @@ import { useInstallerClient } from "./context/installer";
 import Popup from "./Popup";
 import { Button, List, ListItem, Text } from "@patternfly/react-core";
 
-const initIpData = {
-  addresses: [],
-  hostname: ""
-};
-
-function formatIp(address, prefix) {
-  return address + "/" + prefix;
+function formatIp(addr) {
+  return addr.address + "/" + addr.prefix;
 }
 
 export default function TargetIpsPopup() {
   const client = useInstallerClient();
-  const [state, setState] = useState(initIpData);
+  const [addresses, setAddresses] = useState([]);
+  const [hostname, setHostname] = useState("");
   const [isOpen, setIsOpen] = useState(false);
-  const { hostname, addresses } = state;
 
   useEffect(() => {
-    client.network.config().then((data) => {
-      setState(data);
+    client.network.config().then(data => {
+      console.log(data);
+      setHostname(data.hostname);
+      setAddresses(data.addresses);
     });
+
+    // FIXME: If we want to have this component "subscribed" to active
+    // connections changes too, it should "listen" changes in connections and
+    // work with them instead of asking for current network#config. Why? to
+    // avoid extra requests to DBus
+    // For this example, let's just reload the configuration to see it in action
+    const reloadConfig = (...args) => {
+      client.network.config().then(data => {
+        console.log(data);
+        setHostname(data.hostname);
+        setAddresses(data.addresses);
+      });
+    };
+    const f1 = client.network.listen("connectionAdded", reloadConfig);
+    const f2 = client.network.listen("connectionRemoved", reloadConfig);
+    const f3 = client.network.listen("connectionUpdated", reloadConfig);
+    // Read above ^^^
+    // Additional question: are we going to keep that component once we have a
+    // Networking section in the summary?
   }, [client.network]);
 
-  const ips = addresses.map((addr) => formatIp(addr.address, addr.prefix));
+  const ips = addresses.map(formatIp);
   let label = ips[0];
   let title = "IP addresses";
 
@@ -59,23 +75,29 @@ export default function TargetIpsPopup() {
 
   if (addresses.length === 0) return null;
 
-  if (ips.length === 1) return <Text component="small" className="host-ip">{label}</Text>;
+  if (ips.length === 1)
+    return (
+      <Text component="small" className="host-ip">
+        {label}
+      </Text>
+    );
 
   return (
     <>
       <Button variant="link" onClick={open}>
-        { label }
+        {label}
       </Button>
 
-      <Popup
-        isOpen={isOpen}
-        title={title}
-      >
+      <Popup isOpen={isOpen} title={title}>
         <List>
-          { ips.map((ip) => <ListItem key={ip}>{ip}</ListItem>) }
+          {ips.map(ip => (
+            <ListItem key={ip}>{ip}</ListItem>
+          ))}
         </List>
         <Popup.Actions>
-          <Popup.Confirm onClick={close} autoFocus>Close</Popup.Confirm>
+          <Popup.Confirm onClick={close} autoFocus>
+            Close
+          </Popup.Confirm>
         </Popup.Actions>
       </Popup>
     </>

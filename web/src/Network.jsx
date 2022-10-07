@@ -36,6 +36,11 @@ const CONNECTION_TYPES = {
   WIFI: "802-11-wireless"
 };
 
+// TODO: copy/pasted from TargetIpsPopup, should we move it to utils or so?
+function formatIp(addr) {
+  return addr.address + "/" + addr.prefix;
+}
+
 // TODO: improve props once own internal device structure/representation is defined
 const NetworkDevice = ({ Interface: iface, dbusPath: deviceDbusPath, State, ...props }) => {
   const client = useInstallerClient();
@@ -78,11 +83,17 @@ const WiredConnectionStatus = ({ connections }) => {
     return "Wired not connnected";
   }
 
-  return `Wired connected - ${conns.flatMap(c => c.addresses).join(", ")} ${conns.map(c => c.id)}`;
+  return `Wired connected - ${conns.map(c => c.addresses.map(formatIp)).join(", ")} ${conns.map(
+    c => c.id
+  )}`;
 };
 
 const WiFiConnectionStatus = ({ connections, onClick }) => {
   const conns = connections.filter(c => c.state === 2);
+
+  if (conns.length === 0 && connections.length > 0) {
+    return <>There is at least a WiFi connection active.</>;
+  }
 
   if (conns.length === 0) {
     return (
@@ -98,23 +109,58 @@ const WiFiConnectionStatus = ({ connections, onClick }) => {
   // TODO: show the SSID
   return (
     <>
-      WiFi connected {conns.flatMap(c => c.addresses).join(", ")} {conns.map(c => c.id)}
+      WiFi connected {conns.map(c => c.addresses.map(formatIp)).join(", ")} {conns.map(c => c.id)}
     </>
   );
 };
 
 export default function Network() {
   const client = useInstallerClient();
-  const [connections, setConnections] = useState();
+  const [connections, setConnections] = useState([]);
 
+  // ¿Tendre que obtener las conexiones inicialmente, no?
+  // Si me subscribo mas tarde solo voy a obtener las nuevas
+  // que se han añadido o me equivoco?
   useEffect(() => {
-    client.network.listen();
-    client.network.activeConnections().then(setConnections);
+    const loadConnections = async () => {
+      const conns = await client.network.activeConnections();
+
+      setConnections(conns);
+    };
+
+    const onConnectionAdded = connections => {
+      setConnections(conns => [...conns, ...connections]);
+    };
+
+    const onConnectionRemoved = connectionPaths => {
+      setConnections(conns => conns.filter(c => !connectionPaths.includes(c.path)));
+    };
+
+    const onConnectionUpdated = connection => {
+      setConnections(conns => {
+        const newConnections = conns.filter(c => c.path !== connection.path);
+        return [...newConnections, connection];
+      });
+    };
+
+    const f1 = client.network.listen("connectionAdded", onConnectionAdded);
+    const f2 = client.network.listen("connectionRemoved", onConnectionRemoved);
+    const f3 = client.network.listen("connectionUpdated", onConnectionUpdated);
+
+    loadConnections();
+
+    return () => {
+      f1();
+      f2();
+      f3();
+    };
   }, [client.network]);
 
   if (!connections) {
     return "Retrieving network information...";
   }
+
+  console.log("connections are", connections);
 
   const activeWiredConnections = connections.filter(c => c.type === CONNECTION_TYPES.ETHERNET);
   const activeWifiConnections = connections.filter(c => c.type === CONNECTION_TYPES.WIFI);
