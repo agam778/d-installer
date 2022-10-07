@@ -45,8 +45,14 @@ we are already using [Babel](https://babeljs.io/), we decided to rely on it to g
 The downside is that no type-check is performed.
 
 We decided to keep the type-check as a separate step using the TypeScript compiler. `tsc` can check
-the TypeScript and the JavaScript code using the JSDoc annotations for the latter. Hence, the
-following command performs the type-check:
+the TypeScript and, optionally, the JavaScript code using the JSDoc annotations. To enable the
+type-checking on a `.js` file, you need to add a comment like this:
+
+```
+// @ts-check
+```
+
+To perform the type-checking you mus type the following command:
 
 ```
 npm run check-types
