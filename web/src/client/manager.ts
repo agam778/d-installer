@@ -91,5 +91,5 @@ class Client {
   }
 }
 
-const ManagerClient = WithProgress(WithStatus(Client, MANAGER_PATH), MANAGER_PATH);
+class ManagerClient extends WithProgress(WithStatus(Client, MANAGER_PATH), MANAGER_PATH) {}
 export { ManagerClient };

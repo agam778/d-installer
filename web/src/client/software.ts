@@ -88,5 +88,5 @@ class Client {
   }
 }
 
-const SoftwareClient = WithProgress(WithStatus(Client, SOFTWARE_PATH), SOFTWARE_PATH);
+class SoftwareClient extends WithProgress(WithStatus(Client, SOFTWARE_PATH), SOFTWARE_PATH) {}
 export { SoftwareClient };

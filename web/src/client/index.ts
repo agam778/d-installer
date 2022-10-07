@@ -31,17 +31,18 @@ import { NetworkClient } from "./network";
 
 const SERVICE_NAME = "org.opensuse.DInstaller";
 
-const createClient = () => {
-  return {
-    language: new LanguageClient(),
-    manager: new ManagerClient(),
-    monitor: new Monitor(SERVICE_NAME),
-    network: new NetworkClient(),
-    software: new SoftwareClient(),
-    storage: new StorageClient(),
-    users: new UsersClient(),
-    questions: new QuestionsClient()
-  };
-};
+class DInstallerClient {
+  language: LanguageClient = new LanguageClient();
+  manager = new ManagerClient();
+  monitor = new Monitor(SERVICE_NAME);
+  network = new NetworkClient();
+  software = new SoftwareClient();
+  storage = new StorageClient();
+  users = new UsersClient();
+  questions = new QuestionsClient();
+}
 
-export { createClient, phase };
+// TODO: Pass the service name as argument.
+const createClient = () => new DInstallerClient();
+
+export { createClient, DInstallerClient, phase };
