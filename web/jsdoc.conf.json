@@ -4,16 +4,13 @@
     "opts": {
         "destination": "./jsdoc.out/",
         "private": true,
-        "recurse": true,
-        "template": "node_modules/better-docs"
+        "recurse": true
     },
-    "plugins": [
-      "node_modules/better-docs/typescript"
-    ],
+    "plugins": [],
     "recurseDepth": 10,
     "source": {
         "include": [ "src/" ],
-        "includePattern": ".+\\.(js|jsx|jsdoc|ts|tsx)?$",
+        "includePattern": ".+\\.js(doc|x)?$",
         "excludePattern": "(^|\\/|\\\\)_"
     },
     "sourceType": "module",
