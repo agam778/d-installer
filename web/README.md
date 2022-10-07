@@ -28,7 +28,34 @@ However, there is no live or hot reloading feature, so you need to reload the co
 You can visit the module through the following URL:
 http://localhost:9090/cockpit/@localhost/d-installer/index.html.
 
-### JSDoc Documentation
+## TypeScript Support
+
+This project started as a JavaScript-only project and support for TypeScript was added later.
+Therefore, although it is preferred to use TypeScript for the new code, it is perfectly fine to keep
+using JavaScript for the time being.
+
+We need to identify two different activities when it comes to TypeScript support:
+
+* Code generation. We need to turn our TypeScript code into proper JavaScript so the run can run it.
+* Type-checking. Apart from additional abstractions, type-checking is probably the most relevant
+  TypeScript feature.
+
+The TypeScript compiler (`tsc`) can type-check and transpile the code into JavaScript. However, as
+we are already using [Babel](https://babeljs.io/), we decided to rely on it to generate the code.
+The downside is that no type-check is performed.
+
+We decided to keep the type-check as a separate step using the TypeScript compiler. `tsc` can check
+the TypeScript and the JavaScript code using the JSDoc annotations for the latter. Hence, the
+following command performs the type-check:
+
+```
+npm run check-types
+```
+
+Moreover, your editor (or IDE) of choice might help you with type-checking hints while working on
+the project using the configuration included in the `tsconfig.json` file.
+
+## JSDoc Documentation
 
 ```
 npm run jsdoc
