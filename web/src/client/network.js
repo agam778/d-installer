@@ -19,6 +19,8 @@
  * find current contact information at www.suse.com.
  */
 
+// @ts-check
+
 import { DBusClient } from "./dbus";
 
 const NM_IFACE = "org.freedesktop.NetworkManager";
@@ -27,69 +29,66 @@ const NM_IP4CONFIG_IFACE = "org.freedesktop.NetworkManager.IP4Config";
 const SERVICE_NAME = "org.freedesktop.NetworkManager";
 
 /**
- * @typedef {Object} IPConfig
- * @property {IPAddress[]} addresses
- * @property {string} hostname
- */
-type IPConfig = {
-  addresses: IPAddress[],
-  hostname: string
-}
-
-/**
- * @typedef {Object} IPAddress
+ * @typedef {object} IPAddress
  * @property {string} address - like "129.168.1.2"
  * @property {string} prefix - like "16"
  */
-type IPAddress = {
-  address: string,
-  prefix: string
-}
 
-type Connection = {
-  id: string,
-  path: string,
-  type: string,
-  state: number,
-  addresses: IPAddress[]
-}
+/**
+ * @typedef {object} Connection
+ * @property {string} id
+ * @property {string} path
+ * @property {string} type
+ * @property {number} state
+ * @property {IPAddress[]} addresses
+ */
 
-type ConnectionFn = (conns: Connection[]) => void
-type ConnectionPathsFn = (conns: string[]) => void
+/** @typedef {(conns: Connection[]) => void} ConnectionFn */
+/** @typedef {(conns: string[]) => void} ConnectionPathsFn */
 
-type Handlers = {
-  connectionAdded: ConnectionFn[],
-  connectionRemoved: ConnectionFn[],
-  connectionUpdated: ConnectionFn[]
-}
+/**
+ * @typedef {object} Handlers
+ * @property {ConnectionFn[]} connectionAdded
+ * @property {ConnectionFn[]} connectionRemoved
+ * @property {ConnectionFn[]} connectionUpdated
+ */
 
 /**
  * Network client
  */
 class NetworkClient {
-  client: DBusClient;
-  subscribed: boolean = false;
-  connectionsPaths: string[] = [];
-  handlers: Handlers = {
-    connectionAdded: [],
-    connectionRemoved: [],
-    connectionUpdated: [],
-  }
-
   constructor() {
     this.client = new DBusClient(SERVICE_NAME);
+    /** @type {!boolean} */
+    this.subscribed = false;
+    /** @type {string[]} */
+    this.connectionsPaths = [];
+    /** @type {Handlers} */
+    this.handlers = {
+      connectionAdded: [],
+      connectionRemoved: [],
+      connectionUpdated: [],
+    };
   }
 
   /**
    * Returns IP config overview - addresses and hostname
+   * @return {Promise.<{ addresses: IPAddress[], hostname: string}>}
    */
-  async config(): Promise<IPConfig> {
+  async config() {
     return {
       addresses: await this.addresses(),
       hostname: await this.hostname()
     };
   }
 
+  /**
+   * Registers a callback to run when a given event happens
+   *
+   * @property {"connectionAdded" | "connectionRemoved" | "connectionUpdated"} event
+   * @property {ConnectionFn} handler - the callback to be executed
+   * @return {function} a function to remove the callback
+   */
   listen(event: "connectionAdded" | "connectionRemoved" | "connectionUpdated", handler) {
     if (!this.subscribed) {
       // FIXME: when/where should we unsubscribe?
@@ -97,12 +96,19 @@ class NetworkClient {
     }
 
     this.handlers[event].push(handler);
-    return () => { this.handlers[event].filter(h => h !== handler) }
+    return () => { this.handlers[event].filter(h => h !== handler) };
   }
 
+  /**
+   * FIXME: improve this documentation
+   * Starts listening changes on active connections
+   *
+   * @private
+   * @returns {void}
+   */
   async subscribe() {
     this.susbcribed = true;
-    this.connectionsPaths = await this.activeConnectionsPaths(); 
+    this.connectionsPaths = await this.activeConnectionsPaths();
 
     this.client.onSignal({ interface: "org.freedesktop.NetworkManager.Connection.Active", member: "StateChanged" }, (path, iface, signal, args) => {
       this.notifyConnectionUpdated(path);
@@ -112,30 +118,51 @@ class NetworkClient {
       if ("ActiveConnections" in changes) {
         const oldActiveConnections = this.connectionsPaths;
         this.connectionsPaths = changes.ActiveConnections.v;
-        
         const addedConnections = this.connectionsPaths.filter(c => !oldActiveConnections.includes(c));
         const removedConnections = oldActiveConnections.filter(c => !this.connectionsPaths.includes(c));
         if (addedConnections.length) this.notifyAddedConnections(addedConnections);
         if (removedConnections.length) this.notifyRemovedConnections(removedConnections);
       }
-    })
+    });
   }
 
-  private async notifyConnectionUpdated(path: string): Connection {
+  /**
+   * When a connection is updated it calls all the subscribed handlers with the updated connection
+   *
+   * @private
+   * @property {string} path
+   * @returns {void}
+   */
+  async notifyConnectionUpdated(path) {
     const connection = await this.connection(path);
     this.handlers.connectionUpdated.forEach(handler => handler(connection));
   }
 
-  private notifyAddedConnections(connections: string[]) {
+  /**
+   * When a new connection is added it calls all the subscribed handlers with the added connections
+   * Notifies subscribed handlers when a connection is added
+   *
+   * @private
+   * @property {string[]} connectionsPaths
+   * @returns {void}
+   */
+  notifyAddedConnections(connectionsPaths) {
     // FIXME: optimize this
-    const promises = connections.map(path => this.connection(path));
+    const promises = connectionsPaths.map(path => this.connection(path));
     Promise.all(promises).then(conns => {
-      this.handlers.connectionAdded.forEach(handler => handler(conns))
+      this.handlers.connectionAdded.forEach(handler => handler(conns));
     });
   }
 
-  private notifyRemovedConnections(connections: string[]) {
-    this.handlers.connectionRemoved.forEach(handler => handler(connections));
+  /**
+   * When a connection is removed it calls all the subscribed handlers with the removed connections
+   *
+   * @private
+   * @property {string[]} connectionsPaths
+   * @returns {void}
+   */
+  private notifyRemovedConnections(connectionsPaths) {
+    this.handlers.connectionRemoved.forEach(handler => handler(connectionsPaths));
   }
 
   async connection(path: string): Promise<Connection> {
@@ -156,7 +183,10 @@ class NetworkClient {
     };
   }
 
-  async activeConnections(): Promise<Connection[]> {
+  /**
+   * @returns { Promise.<Connection[]> }
+   */
+  async activeConnections() {
     let connections = [];
     const paths = await this.activeConnectionsPaths();
 
@@ -170,22 +200,26 @@ class NetworkClient {
   /**
    * Returns the computer's hostname
    *
+   * @returns { Promise.<string> }
+   *
    * https://developer-old.gnome.org/NetworkManager/stable/gdbus-org.freedesktop.NetworkManager.Settings.html
    */
-  async hostname(): Promise<string> {
+  async hostname() {
     const proxy = await this.client.proxy(NM_IFACE + ".Settings");
 
     return proxy.Hostname;
   }
 
   /*
-   * Returns list of active NM connections
+   * Returns the list of active NM connections paths
+   *
+   * @returns { Promise.<string[]> }
    *
    * Private method.
    * See NM API documentation for details.
    * https://developer-old.gnome.org/NetworkManager/stable/gdbus-org.freedesktop.NetworkManager.html
    */
-  private async activeConnectionsPaths(): Promise<string[]> {
+  async activeConnectionsPaths() {
     const proxy = await this.client.proxy(NM_IFACE);
 
     return proxy.ActiveConnections;
@@ -199,11 +233,12 @@ class NetworkClient {
    * https://developer-old.gnome.org/NetworkManager/stable/gdbus-org.freedesktop.NetworkManager.Connection.Active.html
    * https://developer-old.gnome.org/NetworkManager/stable/gdbus-org.freedesktop.NetworkManager.IP4Config.html
    *
-   * @return {Promise.<Map>}
+   * FIXME: improve type of data
+   * @property {*} data
+   * @returns {Promise.<IPAddress>}
    */
-
-  private connectionIPAddress(data: any): IPAddress {
-    return { address: data.address.v, prefix: data.prefix.v }
+  private connectionIPAddress(data) {
+    return { address: data.address.v, prefix: data.prefix.v };
   }
 
   /*
@@ -211,11 +246,11 @@ class NetworkClient {
    *
    * Private method.
    *
-   * @return {Promise.<Array>}
+   * @return {Promise.<IPAddress[]>}
    */
-  private async addresses(): IPAddress[] {
+  private async addresses() {
     const conns = await this.activeConnections();
-    return conns.flatMap(c => c.addresses)
+    return conns.flatMap(c => c.addresses);
   }
 }
 
