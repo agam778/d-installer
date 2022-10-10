@@ -31,6 +31,7 @@ import Category from "./Category";
 import LanguageSelector from "./LanguageSelector";
 import Storage from "./Storage";
 import Users from "./Users";
+import Network from "./Network";
 import Popup from "./Popup";
 
 import {
@@ -74,17 +75,12 @@ const InstallButton = () => {
         Install
       </Button>
 
-      <Popup
-        title="Confirm Installation"
-        isOpen={isOpen}
-      >
+      <Popup title="Confirm Installation" isOpen={isOpen}>
         <Text>
           If you continue, partitions on your hard disk will be modified according to the
           installation settings in the previous dialog.
         </Text>
-        <Text>
-          Please, cancel and check the settings if you are unsure.
-        </Text>
+        <Text>Please, cancel and check the settings if you are unsure.</Text>
 
         <Popup.Actions>
           <Popup.Confirm onClick={install}>Install</Popup.Confirm>
@@ -106,6 +102,9 @@ function Overview() {
     <Category key="language" title="Language" icon={LanguagesSelectionIcon}>
       <LanguageSelector />
     </Category>,
+    <Category key="network" title="Networking" icon={() => null}>
+      <Network />
+    </Category>,
     <Category key="storage" title="Storage" icon={HardDriveIcon}>
       <Storage />
     </Category>,
@@ -125,9 +124,15 @@ function Overview() {
   return (
     <>
       <Title>{selectedProduct.name}</Title>
-      <PageIcon><OverviewIcon /></PageIcon>
-      <PageActions><ChangeProductButton /></PageActions>
-      <MainActions><InstallButton /></MainActions>
+      <PageIcon>
+        <OverviewIcon />
+      </PageIcon>
+      <PageActions>
+        <ChangeProductButton />
+      </PageActions>
+      <MainActions>
+        <InstallButton />
+      </MainActions>
       <Flex direction={{ default: "column" }}>{renderCategories()}</Flex>
     </>
   );
