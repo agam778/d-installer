@@ -43,6 +43,12 @@ const CONNECTION_STATE = {
   DEACTIVATED: 4
 };
 
+// TODO: document
+const CONNECTION_TYPES = {
+  ETHERNET: "802-3-ethernet",
+  WIFI: "802-11-wireless"
+};
+
 /**
  * @typedef {object} IPAddress
  * @property {string} address - like "129.168.1.2"
@@ -288,4 +294,4 @@ class NetworkClient {
   }
 }
 
-export { NetworkClient };
+export { CONNECTION_STATE, CONNECTION_TYPES, NetworkClient };
