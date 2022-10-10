@@ -22,17 +22,19 @@
 import React, { useEffect, useState } from "react";
 import { Stack, StackItem } from "@patternfly/react-core";
 import { useInstallerClient } from "./context/installer";
+import { useCancellablePromise } from "./utils";
 import { CONNECTION_TYPES } from "./client/network";
 import NetworkWiredStatus from "./NetworkWiredStatus";
 import NetworkWifiStatus from "./NetworkWifiStatus";
 
 export default function Network() {
   const client = useInstallerClient();
+  const { cancellablePromise } = useCancellablePromise();
   const [connections, setConnections] = useState(undefined);
 
   useEffect(() => {
-    client.network.activeConnections().then(setConnections);
-  }, [client.network]);
+    cancellablePromise(client.network.activeConnections()).then(setConnections);
+  }, [client.network, cancellablePromise]);
 
   useEffect(() => {
     const onConnectionAdded = connections => {

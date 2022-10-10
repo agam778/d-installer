@@ -101,6 +101,7 @@ class NetworkClient {
    */
   async config() {
     return {
+      connections: await this.activeConnections(),
       addresses: await this.addresses(),
       hostname: await this.hostname()
     };

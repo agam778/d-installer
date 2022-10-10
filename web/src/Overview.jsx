@@ -39,6 +39,7 @@ import {
   EOS_TRANSLATE as LanguagesSelectionIcon,
   EOS_VOLUME as HardDriveIcon,
   EOS_MANAGE_ACCOUNTS as UsersIcon,
+  EOS_WIFI as NetworkIcon,
   EOS_MODE_EDIT as ModeEditIcon
 } from "eos-icons-react";
 
@@ -102,7 +103,7 @@ function Overview() {
     <Category key="language" title="Language" icon={LanguagesSelectionIcon}>
       <LanguageSelector />
     </Category>,
-    <Category key="network" title="Networking" icon={() => null}>
+    <Category key="network" title="Network" icon={NetworkIcon}>
       <Network />
     </Category>,
     <Category key="storage" title="Storage" icon={HardDriveIcon}>
@@ -123,7 +124,7 @@ function Overview() {
 
   return (
     <>
-      <Title>{selectedProduct.name}</Title>
+      <Title>{selectedProduct?.name}</Title>
       <PageIcon>
         <OverviewIcon />
       </PageIcon>
