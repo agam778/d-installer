@@ -25,6 +25,7 @@ import { DBusClient } from "./dbus";
 
 const NM_SERVICE_NAME = "org.freedesktop.NetworkManager";
 const NM_IFACE = "org.freedesktop.NetworkManager";
+const NM_SETTINGS_IFACE = "org.freedesktop.NetworkManager.Settings";
 const NM_ACTIVE_CONNECTION_IFACE = "org.freedesktop.NetworkManager.Connection.Active";
 const NM_IP4CONFIG_IFACE = "org.freedesktop.NetworkManager.IP4Config";
 
@@ -256,7 +257,7 @@ class NetworkClient {
    * https://developer-old.gnome.org/NetworkManager/stable/gdbus-org.freedesktop.NetworkManager.Settings.html
    */
   async hostname() {
-    const proxy = await this.client.proxy(NM_IFACE + ".Settings");
+    const proxy = await this.client.proxy(NM_SETTINGS_IFACE);
     return proxy.Hostname;
   }
 
@@ -294,6 +295,7 @@ class NetworkClient {
   /*
    * Returns list of IP addresses for all active NM connections
    *
+   * @todo remove duplicates
    * @private
    * @return {Promise.<IPAddress[]>}
    */
