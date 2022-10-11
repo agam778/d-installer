@@ -26,6 +26,7 @@ import { DBusClient } from "./dbus";
 const NM_SERVICE_NAME = "org.freedesktop.NetworkManager";
 const NM_IFACE = "org.freedesktop.NetworkManager";
 const NM_SETTINGS_IFACE = "org.freedesktop.NetworkManager.Settings";
+const NM_CONNECTION_IFACE = "org.freedesktop.NetworkManager.Settings.Connection";
 const NM_ACTIVE_CONNECTION_IFACE = "org.freedesktop.NetworkManager.Connection.Active";
 const NM_IP4CONFIG_IFACE = "org.freedesktop.NetworkManager.IP4Config";
 
@@ -81,7 +82,7 @@ const CONNECTION_TYPES = {
  * @property {IPAddress} addr
  * @return {string}
  */
-const formatIp = (addr) => `${addr.address}/${addr.prefix}`;
+const formatIp = addr => `${addr.address}/${addr.prefix}`;
 
 /**
  * Network client
@@ -143,12 +144,13 @@ class NetworkClient {
    * @return {Promise<any>} function to disable the callback
    */
   async subscribe() {
+    // TODO: refactor this method
     this.susbcribed = true;
     this.connectionsPaths = await this.activeConnectionsPaths();
 
     this.client.onSignal(
       { interface: "org.freedesktop.NetworkManager.Connection.Active", member: "StateChanged" },
-      (path, iface, signal, args) => {
+      (path, _iface, _signal, args) => {
         this.notifyConnectionUpdated(path);
       }
     );
@@ -249,6 +251,34 @@ class NetworkClient {
     return connections;
   }
 
+  async updateConnection(updatedConn) {
+    const proxy = await this.client.proxy(NM_ACTIVE_CONNECTION_IFACE, updatedConn.path);
+    const settingsPath = proxy.Connection;
+    const settingsObject = await this.client.proxy(NM_CONNECTION_IFACE, settingsPath);
+    const settings = await settingsObject.GetSettings();
+    return settings;
+
+    console.log("settings", settings);
+    // const newSettings = settings;
+    // return settingsObject.Update(newSettings);
+  }
+
+  /**
+   *
+   * Returns connection settings for the given connection
+   *
+   * @returns { Promise<any> }
+   */
+  async connectionSettings(connection) {
+    const proxy = await this.client.proxy(NM_ACTIVE_CONNECTION_IFACE, connection.path);
+    const settingsPath = proxy.Connection;
+    const settingsObject = await this.client.proxy(NM_CONNECTION_IFACE, settingsPath);
+    const settings = await settingsObject.GetSettings();
+    return settings;
+    // const proxy = await this.client.proxy(NM_CONNECTION_IFACE, connection.path);
+    // return proxy.GetSettings();
+  }
+
   /**
    * Returns the computer's hostname
    *
@@ -305,9 +335,4 @@ class NetworkClient {
   }
 }
 
-export {
-  CONNECTION_STATE,
-  CONNECTION_TYPES,
-  formatIp,
-  NetworkClient
-};
+export { CONNECTION_STATE, CONNECTION_TYPES, formatIp, NetworkClient };
