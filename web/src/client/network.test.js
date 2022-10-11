@@ -121,7 +121,7 @@ describe("NetworkClient", () => {
   });
 
   describe("#config", () => {
-    it("returns an object containing the hostname, known IPv4 addresses and active connections", async () => {
+    it("returns an object containing the hostname, known IPv4 addresses, and active connections", async () => {
       const client = new NetworkClient(dbusClient);
       const config = await client.config();
 
