@@ -75,6 +75,14 @@ const CONNECTION_TYPES = {
  */
 
 /**
+ * Returns given IP address in the X.X.X.X/YY format
+ *
+ * @property {IPAddress} addr
+ * @return {string}
+ */
+const formatIp = (addr) => `${addr.address}/${addr.prefix}`;
+
+/**
  * Network client
  */
 class NetworkClient {
@@ -295,4 +303,9 @@ class NetworkClient {
   }
 }
 
-export { CONNECTION_STATE, CONNECTION_TYPES, NetworkClient };
+export {
+  CONNECTION_STATE,
+  CONNECTION_TYPES,
+  formatIp,
+  NetworkClient
+};

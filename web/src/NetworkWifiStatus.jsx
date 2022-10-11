@@ -20,35 +20,20 @@
  */
 
 import React from "react";
-import { List, ListItem } from "@patternfly/react-core";
-import { CONNECTION_STATE } from "./client/network";
+import { CONNECTION_STATE, formatIp } from "./client/network";
 
-// TODO: copy/pasted from TargetIpsPopup, should we move it to utils or so?
-function formatIp(addr) {
-  return addr.address + "/" + addr.prefix;
-}
+const renderStatus = conns => {
+  return conns.length ? "WiFi connected:" : "WiFi not connected";
+};
 
 const renderConnections = conns => {
-  return conns.map(connection => {
-    return (
-      <ListItem key={connection.path}>
-        {connection.id} - {connection.addresses.map(formatIp).join(", ")}
-      </ListItem>
-    );
-  });
+  return conns.map(connection => (
+    `${connection.id} ${connection.addresses.map(formatIp).join(", ")}`
+  )).join(" - ");
 };
 
 export default function NetworkWiFiStatus({ connections }) {
   const conns = connections.filter(c => c.state === CONNECTION_STATE.ACTIVATED);
 
-  if (conns.length === 0) {
-    return "Wifi not connected";
-  }
-
-  return (
-    <>
-      WiFi connected:
-      <List>{renderConnections(conns)}</List>
-    </>
-  );
+  return <>{renderStatus(conns)} {renderConnections(conns)}</>;
 }

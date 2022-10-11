@@ -20,14 +20,12 @@
  */
 
 import React, { useEffect, useState } from "react";
+import { Button, List, ListItem, Text } from "@patternfly/react-core";
+import Popup from "./Popup";
+
 import { useInstallerClient } from "./context/installer";
 import { useCancellablePromise } from "./utils";
-import Popup from "./Popup";
-import { Button, List, ListItem, Text } from "@patternfly/react-core";
-
-function formatIp(addr) {
-  return addr.address + "/" + addr.prefix;
-}
+import { formatIp } from "./client/network";
 
 export default function TargetIpsPopup() {
   const client = useInstallerClient();
