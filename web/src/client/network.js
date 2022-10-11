@@ -105,8 +105,8 @@ class NetworkClient {
   }
 
   /**
-   * Returns IP config overview - addresses and hostname
-   * @return {Promise.<{ addresses: IPAddress[], hostname: string}>}
+   * Returns IP config overview - addresses, connections and hostname
+   * @return {Promise<{ addresses: IPAddress[], hostname: string, connections: Connection[]}>}
    */
   async config() {
     return {
@@ -140,7 +140,7 @@ class NetworkClient {
    * Starts listening changes on active connections
    *
    * @private
-   * @returns {void}
+   * @return {Promise<any>} function to disable the callback
    */
   async subscribe() {
     this.susbcribed = true;
@@ -157,9 +157,9 @@ class NetworkClient {
       "/org/freedesktop/NetworkManager",
       "org.freedesktop.NetworkManager",
       (changes, invalid) => {
-        if ("ActiveConnections" in changes) {
+        if ("ActiveConnections" in changes && Array.isArray(changes.ActiveConnections.v)) {
           const oldActiveConnections = this.connectionsPaths;
-          this.connectionsPaths = changes.ActiveConnections.v;
+          this.connectionsPaths = changes.ActiveConnections.v.map(v => v.toString());
           const addedConnections = this.connectionsPaths.filter(
             c => !oldActiveConnections.includes(c)
           );
@@ -178,11 +178,11 @@ class NetworkClient {
    *
    * @private
    * @property {string} path
-   * @returns {void}
+   * @returns {Promise<void>}
    */
   async notifyConnectionUpdated(path) {
     const connection = await this.connection(path);
-    this.handlers.connectionUpdated.forEach(handler => handler(connection));
+    this.handlers.connectionUpdated.forEach(handler => handler([connection]));
   }
 
   /**
