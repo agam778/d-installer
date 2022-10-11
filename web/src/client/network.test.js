@@ -49,36 +49,40 @@ const activeConnections = {
 
 const networkProxy = {
   wait: jest.fn(),
-  ActiveConnections: Object.keys(activeConnections),
+  ActiveConnections: Object.keys(activeConnections)
 };
 
 const networkSettingsProxy = {
   wait: jest.fn(),
-  Hostname: 'testing-machine'
+  Hostname: "testing-machine"
 };
 
-const activeConnectionProxy = (path) => {
+const activeConnectionProxy = path => {
   return activeConnections[path];
 };
 
 const addressesData = {
   "/ip4Config/1": {
     wait: jest.fn(),
-    AddressData: [{
-      address: { v: "10.0.0.1", t: "s" },
-      prefix: { v: "22", t: "s" }
-    }]
+    AddressData: [
+      {
+        address: { v: "10.0.0.1", t: "s" },
+        prefix: { v: "22", t: "s" }
+      }
+    ]
   },
   "/ip4Config/2": {
     wait: jest.fn(),
-    AddressData: [{
-      address: { v: "10.0.0.2", t: "s" },
-      prefix: { v: "22", t: "s" }
-    }]
+    AddressData: [
+      {
+        address: { v: "10.0.0.2", t: "s" },
+        prefix: { v: "22", t: "s" }
+      }
+    ]
   }
 };
 
-const ipConfigProxy = (path) => {
+const ipConfigProxy = path => {
   return addressesData[path];
 };
 
@@ -91,18 +95,18 @@ describe("#formatIp", () => {
 
 const expectedActiveConnections = [
   {
-    id: 'active-wifi-connection',
-    path: '/active/connection/wifi/1',
+    id: "active-wifi-connection",
+    path: "/active/connection/wifi/1",
     state: CONNECTION_STATE.ACTIVATED,
     type: CONNECTION_TYPES.WIFI,
-    addresses: [{ address: '10.0.0.2', prefix: "22" }]
+    addresses: [{ address: "10.0.0.2", prefix: "22" }]
   },
   {
-    id: 'active-wired-connection',
-    path: '/active/connection/wired/1',
+    id: "active-wired-connection",
+    path: "/active/connection/wired/1",
     state: CONNECTION_STATE.ACTIVATED,
     type: CONNECTION_TYPES.ETHERNET,
-    addresses: [{ address: '10.0.0.1', prefix: "22" }]
+    addresses: [{ address: "10.0.0.1", prefix: "22" }]
   }
 ];
 
@@ -116,21 +120,21 @@ describe("NetworkClient", () => {
     });
   });
 
-  describe("config", () => {
+  describe("#config", () => {
     it("returns an object containing the hostname, known IPv4 addresses and active connections", async () => {
       const client = new NetworkClient(dbusClient);
       const config = await client.config();
 
       expect(config.hostname).toEqual(networkSettingsProxy.Hostname);
       expect(config.addresses).toEqual([
-        { address: '10.0.0.2', prefix: "22" },
-        { address: '10.0.0.1', prefix: "22" }
+        { address: "10.0.0.2", prefix: "22" },
+        { address: "10.0.0.1", prefix: "22" }
       ]);
       expect(config.connections).toEqual(expectedActiveConnections);
     });
   });
 
-  describe("activeConnections", () => {
+  describe("#activeConnections", () => {
     it("returns thel list of active connections", async () => {
       const client = new NetworkClient(dbusClient);
       const availableConnections = await client.activeConnections();
