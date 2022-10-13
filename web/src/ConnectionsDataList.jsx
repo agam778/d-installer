@@ -26,20 +26,20 @@ import {
   DataListItem,
   DataListCell,
   DataListItemRow,
-  DataListItemCells,
+  DataListItemCells
 } from "@patternfly/react-core";
 
 import { formatIp } from "./client/network";
 
-export default function ConnectionsDataList({ conns, onModify }) {
+export default function ConnectionsDataList({ conns, onSelect }) {
   if (conns.length === 0) return null;
 
-  const renderActions = (conn) => {
-    if (!onModify) return null;
+  const renderConnectionId = (conn, callback) => {
+    if (!callback) return conn.id;
 
     return (
-      <Button variant="link" isInline onClick={() => onModify(conn)}>
-        Modify
+      <Button variant="link" isInline onClick={() => callback(conn)}>
+        {conn.id}
       </Button>
     );
   };
@@ -52,13 +52,10 @@ export default function ConnectionsDataList({ conns, onModify }) {
             <DataListItemCells
               dataListCells={[
                 <DataListCell key="connection-id" isFilled={false}>
-                  {conn.id}
+                  {renderConnectionId(conn, onSelect)}
                 </DataListCell>,
                 <DataListCell key="connection-ips" isFilled={false} wrapModifier="truncate">
                   {conn.addresses.map(formatIp).join(", ")}
-                </DataListCell>,
-                <DataListCell key="connection-actions" isFilled={false}>
-                  {renderActions(conn)}
                 </DataListCell>
               ]}
             />

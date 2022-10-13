@@ -20,20 +20,18 @@
  */
 
 import React from "react";
-import { CONNECTION_STATE, formatIp } from "./client/network";
+import { Text } from "@patternfly/react-core";
+import { CONNECTION_STATE } from "./client/network";
 
-const renderStatus = conns => {
-  return conns.length ? "WiFi connected:" : "WiFi not connected";
-};
-
-const renderConnections = conns => {
-  return conns.map(connection => (
-    `${connection.id} ${connection.addresses.map(formatIp).join(", ")}`
-  )).join(" - ");
-};
+import ConnectionsDataList from "./ConnectionsDataList";
 
 export default function NetworkWiFiStatus({ connections }) {
   const conns = connections.filter(c => c.state === CONNECTION_STATE.ACTIVATED);
 
-  return <>{renderStatus(conns)} {renderConnections(conns)}</>;
+  return (
+    <>
+      <Text>{conns.length ? "WiFi connected:" : "WiFi not connected"}</Text>
+      <ConnectionsDataList conns={conns} />
+    </>
+  );
 }

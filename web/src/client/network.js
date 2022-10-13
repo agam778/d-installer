@@ -23,6 +23,8 @@
 
 import { DBusClient } from "./dbus";
 
+import cockpit from "../lib/cockpit";
+
 const NM_SERVICE_NAME = "org.freedesktop.NetworkManager";
 const NM_IFACE = "org.freedesktop.NetworkManager";
 const NM_SETTINGS_IFACE = "org.freedesktop.NetworkManager.Settings";
@@ -256,11 +258,35 @@ class NetworkClient {
     const settingsPath = proxy.Connection;
     const settingsObject = await this.client.proxy(NM_CONNECTION_IFACE, settingsPath);
     const settings = await settingsObject.GetSettings();
-    return settings;
 
-    console.log("settings", settings);
-    // const newSettings = settings;
-    // return settingsObject.Update(newSettings);
+    /* la parte complicada */
+
+    console.log("#updatedConnection connection", updatedConn);
+    console.log("#updatedConnection settings", settings);
+    delete settings.ipv4.addresses;
+    const newSettings = {
+      ...settings,
+      connection: {
+        ...settings.connection,
+        id: cockpit.variant("s", updatedConn.id)
+      },
+      ipv4: {
+        ...settings.ipv4,
+        "address-data": cockpit.variant("aa{sv}", updatedConn.addresses.map(addr => (
+          {
+            address: cockpit.variant("s", addr.address),
+            prefix: cockpit.variant("u", parseInt(addr.prefix))
+          }
+        ))
+        ),
+        method: cockpit.variant("s", "manual")
+      }
+
+    };
+
+    console.log("#updatedConnection newsettings", newSettings);
+
+    return settingsObject.Update(newSettings);
   }
 
   /**

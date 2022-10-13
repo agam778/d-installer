@@ -1,0 +1,126 @@
+/*
+ * Copyright (c) [2020] SUSE LLC
+ *
+ * All Rights Reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of version 2 of the GNU General Public License as published
+ * by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, contact SUSE LLC.
+ *
+ * To contact SUSE LLC about this file by physical or electronic mail, you may
+ * find current contact information at www.suse.com.
+ */
+
+import React from "react";
+import {
+  Button,
+  DataList,
+  DataListItem,
+  DataListItemRow,
+  DataListItemCells,
+  DataListCell,
+  DataListAction,
+  TextInput,
+  Stack,
+  StackItem,
+  Split,
+  SplitItem
+} from "@patternfly/react-core";
+
+import PlusIcon from "@patternfly/react-icons/dist/js/icons/plus-icon";
+import MinusIcon from "@patternfly/react-icons/dist/js/icons/minus-icon";
+
+let index = 0;
+
+export default function AddressesDataList({ addresses, updateAddresses, allowEmpty = true }) {
+  const addrs = addresses.map(addr => ({ ...addr, id: index++ }));
+
+  const addAddress = () => {
+    addrs.push({ address: "", prefix: "", id: index++ });
+    updateAddresses(addrs);
+  };
+
+  const updateAddress = (id, field, value) => {
+    const address = addrs.find(addr => addr.id === id);
+    address[field] = value;
+
+    // TODO: check if this do not generate not needed re-renders
+    updateAddresses(addrs);
+  };
+
+  const deleteAddress = id => {
+    const addressIdx = addrs.findIndex(addr => addr.id === id);
+    addrs.splice(addressIdx, 1);
+    updateAddresses(addrs);
+  };
+
+  const renderAddress = ({ id, local, label }) => {
+    const renderDeleteAction = () => {
+      if (!allowEmpty && addresses.length === 1) return null;
+
+      return (
+        <DataListAction>
+          <Button variant="secondory" className="btn-sm" onClick={() => deleteAddress(id)}>
+            <MinusIcon />
+          </Button>
+        </DataListAction>
+      );
+    };
+
+    const cells = [
+      <DataListCell key={`address-${id}-local`}>
+        <TextInput
+          defaultValue={local}
+          onChange={value => updateAddress(id, "local", value)}
+          placeholder="Ip Address"
+          aria-label="Ip Address"
+        />
+      </DataListCell>,
+      <DataListCell key={`address-${id}-label`}>
+        <TextInput
+          defaultValue={label}
+          onChange={value => updateAddress(id, "label", value)}
+          placeholder="Prefix length or netmask"
+          aria-label="Prefix length or netmask"
+        />
+      </DataListCell>
+    ];
+
+    return (
+      <DataListItem key={`address-${id}`}>
+        <DataListItemRow>
+          <DataListItemCells dataListCells={cells} />
+          {renderDeleteAction()}
+        </DataListItemRow>
+      </DataListItem>
+    );
+  };
+
+  return (
+    <Stack className="data-list-form" hasGutter>
+      <StackItem>
+        <Split hasGutter>
+          <SplitItem isFilled>Addresses</SplitItem>
+          <SplitItem>
+            <Button variant="primary" className="btn-sm" onClick={() => addAddress()}>
+              <PlusIcon />
+            </Button>
+          </SplitItem>
+        </Split>
+      </StackItem>
+      <StackItem>
+        <DataList isCompact gridBreakpoint="none" title="Addresses data list">
+          {addrs.map(address => renderAddress(address))}
+        </DataList>
+      </StackItem>
+    </Stack>
+  );
+}
