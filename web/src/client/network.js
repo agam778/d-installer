@@ -224,6 +224,7 @@ class NetworkClient {
   async connection(path) {
     const connection = await this.client.proxy(NM_ACTIVE_CONNECTION_IFACE, path);
     let addresses = [];
+    let ip4 = { addresses: [], method: "auto" };
 
     if (connection.State === CONNECTION_STATE.ACTIVATED) {
       const ip4Config = await this.client.proxy(NM_IP4CONFIG_IFACE, connection.Ip4Config);
@@ -233,10 +234,26 @@ class NetworkClient {
     return {
       id: connection.Id,
       path,
+      settings_path: connection.Connection,
+      device_path: connection.Devices[0],
       addresses,
       type: connection.Type,
       state: connection.State
     };
+  }
+
+  /*
+   *  Reactivate the given active connection
+   *
+   * Private method.
+   * See NM API documentation for details.
+   * https://developer-old.gnome.org/NetworkManager/stable/gdbus-org.freedesktop.NetworkManager.html
+   */
+  async activateConnection(connection) {
+    console.log("The connection to be activated is: ", connection);
+    const proxy = await this.client.proxy(NM_IFACE);
+
+    return proxy.ActivateConnection(connection.settings_path, connection.device_path, "/");
   }
 
   /**
@@ -286,7 +303,8 @@ class NetworkClient {
 
     console.log("#updatedConnection newsettings", newSettings);
 
-    return settingsObject.Update(newSettings);
+    settingsObject.Update(newSettings);
+    await this.activateConnection(updatedConn);
   }
 
   /**
@@ -297,8 +315,7 @@ class NetworkClient {
    */
   async connectionSettings(connection) {
     const proxy = await this.client.proxy(NM_ACTIVE_CONNECTION_IFACE, connection.path);
-    const settingsPath = proxy.Connection;
-    const settingsObject = await this.client.proxy(NM_CONNECTION_IFACE, settingsPath);
+    const settingsObject = await this.client.proxy(NM_CONNECTION_IFACE, connection.settings_path);
     const settings = await settingsObject.GetSettings();
     return settings;
     // const proxy = await this.client.proxy(NM_CONNECTION_IFACE, connection.path);

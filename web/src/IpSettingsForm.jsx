@@ -57,7 +57,7 @@ export default function IpSettingsForm({ connection, onClose }) {
     };
 
     console.log(updatedConnection);
-    //client.network.updateConnection(updatedConnection);
+    client.network.updateConnection(updatedConnection);
     onClose();
   };
 
