@@ -1,5 +1,5 @@
 /*
- * Copyright (c) [2020] SUSE LLC
+ * Copyright (c) [2022] SUSE LLC
  *
  * All Rights Reserved.
  *
@@ -17,6 +17,12 @@
  *
  * To contact SUSE LLC about this file by physical or electronic mail, you may
  * find current contact information at www.suse.com.
+ */
+
+/*
+ * Based in the previous work done for cockpit-wicked project, see
+ *   - https://github.com/openSUSE/cockpit-wicked
+ *   - https://github.com/openSUSE/cockpit-wicked/blob/master/src/components/AddressesDataList.js
  */
 
 import React from "react";
@@ -40,26 +46,28 @@ import MinusIcon from "@patternfly/react-icons/dist/js/icons/minus-icon";
 
 let index = 0;
 
-export default function AddressesDataList({ addresses, updateAddresses, allowEmpty = true }) {
-  const addrs = addresses.map(addr => ({ ...addr, id: index++ }));
+export default function AddressesDataList({
+  addresses: originalAddresses,
+  updateAddresses,
+  allowEmpty = true
+}) {
+  const addresses = originalAddresses.map(addr => ({ ...addr, id: index++ }));
 
   const addAddress = () => {
-    addrs.push({ address: "", prefix: "", id: index++ });
-    updateAddresses(addrs);
+    addresses.push({ address: "", prefix: "", id: index++ });
+    updateAddresses(addresses);
   };
 
   const updateAddress = (id, field, value) => {
-    const address = addrs.find(addr => addr.id === id);
+    const address = addresses.find(addr => addr.id === id);
     address[field] = value;
-
-    // TODO: check if this do not generate not needed re-renders
-    updateAddresses(addrs);
+    updateAddresses(addresses);
   };
 
   const deleteAddress = id => {
-    const addressIdx = addrs.findIndex(addr => addr.id === id);
-    addrs.splice(addressIdx, 1);
-    updateAddresses(addrs);
+    const addressIdx = addresses.findIndex(addr => addr.id === id);
+    addresses.splice(addressIdx, 1);
+    updateAddresses(addresses);
   };
 
   const renderAddress = ({ id, local, label }) => {
@@ -118,7 +126,7 @@ export default function AddressesDataList({ addresses, updateAddresses, allowEmp
       </StackItem>
       <StackItem>
         <DataList isCompact gridBreakpoint="none" title="Addresses data list">
-          {addrs.map(address => renderAddress(address))}
+          {addresses.map(address => renderAddress(address))}
         </DataList>
       </StackItem>
     </Stack>
