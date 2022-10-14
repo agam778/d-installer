@@ -51,7 +51,11 @@ export default function AddressesDataList({
   updateAddresses,
   allowEmpty = true
 }) {
-  const addresses = originalAddresses.map(addr => ({ ...addr, id: index++ }));
+  const addresses = originalAddresses.map(addr => {
+    const newAddr = addr;
+    if (!newAddr.id) newAddr.id = index++;
+    return newAddr;
+  });
 
   const addAddress = () => {
     addresses.push({ address: "", prefix: "", id: index++ });
