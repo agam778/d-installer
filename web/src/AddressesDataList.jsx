@@ -70,13 +70,13 @@ export default function AddressesDataList({
     updateAddresses(addresses);
   };
 
-  const renderAddress = ({ id, local, label }) => {
+  const renderAddress = ({ id, address, prefix }) => {
     const renderDeleteAction = () => {
       if (!allowEmpty && addresses.length === 1) return null;
 
       return (
         <DataListAction>
-          <Button variant="secondory" className="btn-sm" onClick={() => deleteAddress(id)}>
+          <Button variant="secondary" className="btn-sm" onClick={() => deleteAddress(id)}>
             <MinusIcon />
           </Button>
         </DataListAction>
@@ -86,16 +86,16 @@ export default function AddressesDataList({
     const cells = [
       <DataListCell key={`address-${id}-local`}>
         <TextInput
-          defaultValue={local}
-          onChange={value => updateAddress(id, "local", value)}
+          defaultValue={address}
+          onChange={value => updateAddress(id, "address", value)}
           placeholder="Ip Address"
           aria-label="Ip Address"
         />
       </DataListCell>,
       <DataListCell key={`address-${id}-label`}>
         <TextInput
-          defaultValue={label}
-          onChange={value => updateAddress(id, "label", value)}
+          defaultValue={prefix}
+          onChange={value => updateAddress(id, "prefix", value)}
           placeholder="Prefix length or netmask"
           aria-label="Prefix length or netmask"
         />
