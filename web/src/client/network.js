@@ -223,23 +223,30 @@ class NetworkClient {
    */
   async connection(path) {
     const connection = await this.client.proxy(NM_ACTIVE_CONNECTION_IFACE, path);
-    let addresses = [];
-    let ip4 = { addresses: [], method: "auto" };
+    const settings = await this.connectionSettings({ path: path, settings_path: connection.Connection });
+    const { ipv4, ipv6 } = settings;
 
-    if (connection.State === CONNECTION_STATE.ACTIVATED) {
-      const ip4Config = await this.client.proxy(NM_IP4CONFIG_IFACE, connection.Ip4Config);
-      addresses = ip4Config.AddressData.map(this.connectionIPAddress);
-    }
+    // let addresses = [];
 
-    return {
+    // if (connection.State === CONNECTION_STATE.ACTIVATED) {
+    //   const ip4Config = await this.client.proxy(NM_IP4CONFIG_IFACE, connection.Ip4Config);
+    //   addresses = ip4Config.AddressData.map(this.connectionIPAddress);
+    // }
+
+    const c = {
       id: connection.Id,
       path,
       settings_path: connection.Connection,
       device_path: connection.Devices[0],
-      addresses,
+      ipv4,
+      ipv6,
+      addresses: [...ipv4["address-data"].v, ...ipv6["address-data"].v].map(this.connectionIPAddress),
       type: connection.Type,
       state: connection.State
     };
+
+    console.log(c);
+    return c;
   }
 
   /*
